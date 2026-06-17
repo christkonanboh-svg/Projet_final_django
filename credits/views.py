@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
@@ -18,6 +19,8 @@ from .serializers import (
     CreditDocumentUploadSerializer,
     CreditStatusUpdateSerializer,
 )
+
+User = get_user_model()
 
 
 class EligibilityScoreSerializer(serializers.Serializer):
@@ -61,6 +64,16 @@ class CreditListCreateView(generics.ListCreateAPIView):
             "credit_submitted",
             {"credit_id": credit.id},
         )
+        # Notify all agents and admins
+        staff = User.objects.filter(role__in=["agent", "admin"])
+        for member in staff:
+            create_notification(
+                member,
+                "Nouvelle demande de crédit",
+                f"{user.get_full_name() or user.username} a soumis une demande de {credit.amount_requested} FCFA.",
+                "new_credit_request",
+                {"credit_id": credit.id, "client_id": user.id},
+            )
 
 
 class CreditDetailView(generics.RetrieveAPIView):
@@ -102,8 +115,12 @@ class CreditStatusUpdateView(APIView):
             )
 
         credit.status = new_status
+        agent_assigned = False
         if "assigned_agent" in serializer.validated_data:
-            credit.assigned_agent = serializer.validated_data["assigned_agent"]
+            new_agent = serializer.validated_data["assigned_agent"]
+            if new_agent != credit.assigned_agent:
+                credit.assigned_agent = new_agent
+                agent_assigned = True
         if new_status == CreditApplication.Status.REJECTED:
             credit.rejection_reason = serializer.validated_data.get("rejection_reason", "")
         if new_status == CreditApplication.Status.APPROVED:
@@ -113,13 +130,27 @@ class CreditStatusUpdateView(APIView):
             credit.disbursed_at = timezone.now()
 
         credit.save()
+        status_messages = {
+            "in_review": "Votre demande est en cours d'analyse par notre équipe.",
+            "approved": f"Félicitations ! Votre demande de {credit.amount_requested} FCFA a été approuvée.",
+            "rejected": f"Votre demande de {credit.amount_requested} FCFA n'a pas été retenue." + (f" Motif : {credit.rejection_reason}" if credit.rejection_reason else ""),
+            "disbursed": f"Votre crédit de {credit.amount_requested} FCFA a été décaissé.",
+        }
         create_notification(
             credit.client,
             "Mise à jour de votre crédit",
-            f"Votre demande est maintenant : {credit.get_status_display()}.",
+            status_messages.get(new_status, f"Votre demande est maintenant : {credit.get_status_display()}."),
             "credit_status",
             {"credit_id": credit.id, "status": new_status},
         )
+        if agent_assigned and credit.assigned_agent:
+            create_notification(
+                credit.assigned_agent,
+                "Crédit assigné",
+                f"Le crédit #{credit.id} de {credit.client.get_full_name() or credit.client.username} ({credit.amount_requested} FCFA) vous a été assigné.",
+                "credit_assigned",
+                {"credit_id": credit.id, "client_id": credit.client.id},
+            )
         return Response(CreditApplicationSerializer(credit).data)
 
 

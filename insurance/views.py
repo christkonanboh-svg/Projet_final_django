@@ -1,3 +1,5 @@
+from django.contrib.auth import get_user_model
+
 from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -13,6 +15,8 @@ from .serializers import (
     InsuranceSubscribeSerializer,
     InsuranceSubscriptionSerializer,
 )
+
+User = get_user_model()
 
 
 class InsuranceProductListView(generics.ListAPIView):
@@ -56,6 +60,16 @@ class InsuranceSubscriptionListCreateView(generics.ListCreateAPIView):
             "insurance_subscribed",
             {"subscription_id": subscription.id},
         )
+        # Notify agents and admin
+        staff = User.objects.filter(role__in=["agent", "admin"])
+        for member in staff:
+            create_notification(
+                member,
+                "Nouvelle souscription assurance",
+                f"{request.user.get_full_name() or request.user.username} a souscrit à {subscription.product.name}.",
+                "new_insurance_subscription",
+                {"subscription_id": subscription.id, "client_id": request.user.id},
+            )
         return Response(
             InsuranceSubscriptionSerializer(subscription).data,
             status=status.HTTP_201_CREATED,
