@@ -52,14 +52,15 @@ python manage.py seed_db
 daphne -b 0.0.0.0 -p 8003 config.asgi:application
 ```
 
-Le projet est accessible à l'adresse **http://127.0.0.1:8003/** (redirige automatiquement vers la page de connexion).
+Le projet est accessible à l'adresse **http://127.0.0.1:8003/** (landing page publique avec présentation du service).
 
 ## URLs principales
 
 | URL | Description |
 |-----|-------------|
-| **http://127.0.0.1:8003/** | Page d'accueil → redirection connexion |
+| **http://127.0.0.1:8003/** | Landing page publique |
 | http://127.0.0.1:8003/app/login/ | Connexion |
+| http://127.0.0.1:8003/app/register/ | Création de compte client |
 | http://127.0.0.1:8003/app/client/dashboard/ | Interface client |
 | http://127.0.0.1:8003/app/agent/dashboard/ | Interface agent |
 | http://127.0.0.1:8003/app/admin/dashboard/ | Interface admin |
@@ -73,8 +74,9 @@ Le projet est accessible à l'adresse **http://127.0.0.1:8003/** (redirige autom
 |------|-------------|--------------|
 | Administrateur | admin | admin123 |
 | Agent | agent1 | agent123 |
-| Client | client1 | client123 |
-| Client | client2 | client123 |
+| Client | awa | awa123 |
+
+> ⚠️ **Chat temps réel** : après la création d'un nouveau compte ou le lancement du serveur, patientez **10 secondes maximum** pour que la connexion WebSocket du chat soit établie automatiquement.
 
 ## Modules API
 
@@ -128,9 +130,9 @@ Le projet est accessible à l'adresse **http://127.0.0.1:8003/** (redirige autom
 
 Le projet propose **3 interfaces distinctes** accessibles après connexion :
 
-- **Client** : dashboard, crédits (création, suivi), assurances (catalogue, souscription), remboursements (échéancier), chat support, notifications, profil
-- **Agent** : dashboard (statistiques, activités), crédits (gestion, approbation/rejet), chat support (conversations), notifications, profil
-- **Admin** : dashboard (KPIs globaux), crédits (supervision), utilisateurs (gestion), chat (supervision), assurances (toutes souscriptions), notifications, profil
+- **Client** : dashboard, crédits (création, suivi, upload de justificatifs, éligibilité + échéancier), assurances (catalogue, souscription), remboursements (échéancier avec paiement Orange Money / MTN / Wave), chat support, notifications, profil
+- **Agent** : dashboard (statistiques, activités), crédits (gestion, approbation/rejet), assurances (souscriptions clients), remboursements (échéanciers clients), chat support (conversations), notifications, profil
+- **Admin** : dashboard (KPIs globaux), crédits (supervision), utilisateurs (création d'agents avec mot de passe généré), chat (supervision), assurances (toutes souscriptions), remboursements (tous les échéanciers), notifications, profil
 
 ## Configuration PostgreSQL
 
@@ -166,11 +168,12 @@ cofinance-platform/
 ├── templates/
 │   ├── app/          # Interfaces graphiques (client, agent, admin)
 │   │   ├── base.html # Layout principal avec sidebar
+│   │   ├── index.html # Landing page publique
 │   │   ├── login.html
-│   │   ├── client/   # 7 pages
-│   │   ├── agent/    # 6 pages
-│   │   └── admin/    # 7 pages
-│   └── chat/         # Pages chat historiques
+│   │   ├── register.html
+│   │   ├── client/   # 7 pages (dashboard, crédits, assurances, remboursements, chat, notifications, profil)
+│   │   ├── agent/    # 7 pages (dashboard, crédits, assurances, remboursements, chat, notifications, profil)
+│   │   └── admin/    # 9 pages (dashboard, crédits, utilisateurs, chat, assurances, agents, remboursements, notifications, profil)
 └── requirements.txt
 ```
 

@@ -59,6 +59,7 @@
             flex-direction: column;
         }
         .login-card:hover { box-shadow: var(--shadow-lg); }
+        .login-actions .btn { width: 100%; }
         .form-group { margin-bottom: 1.25rem; }
         .form-group label { display: block; margin-bottom: 0.4rem; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
         .form-group input {
@@ -68,7 +69,7 @@
             transition: var(--transition); background: var(--bg); color: var(--text); outline: none;
         }
         .form-group input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(13,122,63,0.1); background: var(--surface); }
-        .login-actions { margin-top: auto; padding-top: 1rem; }
+        .login-actions { margin-top: auto; padding-top: 1rem; text-align: center; }
         .btn {
             width: 100%; padding: 0.85rem 1.5rem;
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
@@ -110,7 +111,7 @@
                 <input type="password" id="password" placeholder="Votre mot de passe" onkeydown="if(event.key==='Enter')login()">
             </div>
             <p class="error-msg" id="loginError"></p>
-            <div class="login-actions"><button onclick="login()" id="loginBtn">Se connecter</button></div>
+            <div class="login-actions"><button class="btn" onclick="login()" id="loginBtn">Se connecter</button></div>
             <div class="login-hint" style="cursor:pointer" onclick="this.style.display='none'">Identifiants démo (cliquer pour masquer) — Client: awa/awa123 · Agent: agent1/agent123 · Admin: admin/admin123</div>
         </div>
         <div class="login-footer">

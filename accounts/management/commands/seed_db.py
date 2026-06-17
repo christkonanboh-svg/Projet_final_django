@@ -34,9 +34,8 @@ class Command(BaseCommand):
                 "is_online": True,
             },
         )
-        if not admin_user.has_usable_password():
-            admin_user.set_password("admin123")
-            admin_user.save()
+        admin_user.set_password("admin123")
+        admin_user.save()
 
         agent, _ = User.objects.get_or_create(
             username="agent1",
@@ -50,9 +49,8 @@ class Command(BaseCommand):
                 "is_online": True,
             },
         )
-        if not agent.has_usable_password():
-            agent.set_password("agent123")
-            agent.save()
+        agent.set_password("agent123")
+        agent.save()
 
         client, _ = User.objects.get_or_create(
             username="awa",
@@ -65,9 +63,8 @@ class Command(BaseCommand):
                 "phone": "+2250700000101",
             },
         )
-        if not client.has_usable_password():
-            client.set_password("awa123")
-            client.save()
+        client.set_password("awa123")
+        client.save()
 
         self.stdout.write("Création des produits d'assurance...")
         products_data = [
@@ -285,14 +282,17 @@ class Command(BaseCommand):
                 },
             ]
             for notif_data in notifications_data:
-                Notification.objects.get_or_create(
+                existing = Notification.objects.filter(
                     user=notif_data["user"],
                     title=notif_data["title"],
-                    defaults={
-                        "message": notif_data["message"],
-                        "notification_type": notif_data["notification_type"],
-                    },
-                )
+                ).first()
+                if not existing:
+                    Notification.objects.create(
+                        user=notif_data["user"],
+                        title=notif_data["title"],
+                        message=notif_data["message"],
+                        notification_type=notif_data["notification_type"],
+                    )
 
         self.stdout.write("Création des conversations de démonstration...")
 
