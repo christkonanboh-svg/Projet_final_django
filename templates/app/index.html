@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>COFINANCE CI - Crédit & Assurance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #0d7a3f; --primary-dark: #065a2c; --accent: #00b894;
+            --text: #1a1a2e; --text-secondary: #6b7280; --text-muted: #9ca3af;
+            --border: #e5e7eb; --border-light: #f0f0f0;
+            --surface: #ffffff; --bg: #f8fbf8;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 24px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 40px rgba(0,0,0,0.1);
+            --radius-sm: 8px; --radius-md: 16px; --radius-lg: 24px;
+            --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes pulse-ring { 0% { transform: scale(0.95); opacity: 0.7; } 100% { transform: scale(1.15); opacity: 0; } }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            color: var(--text);
+            background-image: radial-gradient(ellipse at 10% 20%, rgba(13,122,63,0.05) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(0,184,148,0.05) 0%, transparent 50%);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+        nav {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1.5rem 0; animation: fadeIn 0.8s both;
+        }
+        .nav-logo { display: flex; align-items: center; gap: 0.75rem; font-weight: 800; font-size: 1.2rem; text-decoration: none; color: var(--text); }
+        .nav-logo .logo-mark {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .nav-logo .logo-mark svg { width: 20px; height: 20px; fill: white; }
+        .nav-logo span { background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .nav-links { display: flex; gap: 1rem; }
+        .nav-links a { text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: var(--transition); }
+        .nav-links .btn-outline {
+            padding: 0.6rem 1.5rem; border: 2px solid var(--primary); color: var(--primary);
+            border-radius: var(--radius-sm); background: transparent;
+        }
+        .nav-links .btn-outline:hover { background: var(--primary); color: white; }
+        .nav-links .btn-primary {
+            padding: 0.6rem 1.5rem; background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white; border-radius: var(--radius-sm); border: none;
+        }
+        .nav-links .btn-primary:hover { box-shadow: 0 4px 20px rgba(13,122,63,0.3); transform: translateY(-1px); }
+
+        .hero {
+            display: flex; align-items: center; gap: 4rem;
+            padding: 4rem 0 2rem; min-height: calc(100vh - 100px);
+            animation: fadeInUp 0.8s 0.2s both;
+        }
+        .hero-content { flex: 1; }
+        .hero-content .badge {
+            display: inline-block; padding: 0.35rem 1rem;
+            background: rgba(13,122,63,0.08); color: var(--primary);
+            border-radius: 100px; font-size: 0.8rem; font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+        .hero-content h1 { font-size: 3.2rem; font-weight: 900; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 1.5rem; }
+        .hero-content h1 .highlight { background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-content p { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.7; max-width: 520px; margin-bottom: 2.5rem; }
+        .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .hero-actions .btn-primary {
+            padding: 1rem 2.5rem; background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white; border: none; border-radius: var(--radius-sm);
+            font-size: 1rem; font-weight: 700; font-family: inherit;
+            cursor: pointer; transition: var(--transition); text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .hero-actions .btn-primary:hover { box-shadow: 0 8px 32px rgba(13,122,63,0.35); transform: translateY(-2px); }
+        .hero-actions .btn-outline {
+            padding: 1rem 2.5rem; border: 2px solid var(--border); color: var(--text);
+            border-radius: var(--radius-sm); background: var(--surface);
+            font-size: 1rem; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: var(--transition); text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .hero-actions .btn-outline:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); }
+
+        .hero-visual { flex: 1; display: flex; justify-content: center; position: relative; }
+        .hero-card {
+            background: var(--surface); border-radius: var(--radius-lg);
+            padding: 2.5rem; box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-light);
+            width: 100%; max-width: 420px;
+            animation: float 6s ease-in-out infinite;
+        }
+        .hero-card .stat-row { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
+        .hero-card .stat { flex: 1; text-align: center; padding: 1rem; background: var(--bg); border-radius: var(--radius-sm); }
+        .hero-card .stat .value { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
+        .hero-card .stat .label { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+        .hero-card .feature-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .hero-card .feature-item { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; color: var(--text-secondary); }
+        .hero-card .feature-item svg { width: 18px; height: 18px; stroke: var(--primary); flex-shrink: 0; }
+
+        .features {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;
+            padding: 4rem 0; animation: fadeInUp 0.8s 0.4s both;
+        }
+        .feature-card {
+            background: var(--surface); border-radius: var(--radius-md);
+            padding: 2rem; border: 1px solid var(--border-light);
+            transition: var(--transition);
+        }
+        .feature-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+        .feature-card .icon {
+            width: 48px; height: 48px; border-radius: var(--radius-sm);
+            background: rgba(13,122,63,0.08); display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1rem;
+        }
+        .feature-card .icon svg { width: 24px; height: 24px; stroke: var(--primary); }
+        .feature-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .feature-card p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+
+        .footer { text-align: center; padding: 2rem 0; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid var(--border-light); margin-top: 2rem; }
+
+        @media (max-width: 768px) {
+            .hero { flex-direction: column; text-align: center; padding: 2rem 0; gap: 3rem; }
+            .hero-content h1 { font-size: 2.2rem; }
+            .hero-content p { margin-left: auto; margin-right: auto; }
+            .hero-actions { justify-content: center; }
+            .features { grid-template-columns: 1fr; }
+            .nav-links .btn-primary, .nav-links .btn-outline { padding: 0.5rem 1rem; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="/" class="nav-logo">
+                <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
+                CO<span>FINANCE</span> CI
+            </a>
+            <div class="nav-links">
+                <a href="/app/login/" class="btn-outline">Se connecter</a>
+                <a href="/app/register/" class="btn-primary">Créer un compte</a>
+            </div>
+        </nav>
+
+        <section class="hero">
+            <div class="hero-content">
+                <div class="badge">Service financier digital</div>
+                <h1>Le crédit et l'assurance<br><span class="highlight">à portée de main</span></h1>
+                <p>COFINANCE CI vous accompagne dans vos projets avec des solutions de microcrédit adaptées, une assurance mobile accessible et un support client en temps réel.</p>
+                <div class="hero-actions">
+                    <a href="/app/login/" class="btn-primary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                        Se connecter
+                    </a>
+                    <a href="/app/register/" class="btn-outline">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                        Créer un compte
+                    </a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="hero-card">
+                    <div class="stat-row">
+                        <div class="stat"><div class="value">5 000+</div><div class="label">Clients actifs</div></div>
+                        <div class="stat"><div class="value">98%</div><div class="label">Satisfaction</div></div>
+                        <div class="stat"><div class="value">2 Mds</div><div class="label">Décaissés</div></div>
+                    </div>
+                    <div class="feature-list">
+                        <div class="feature-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Dépôt en ligne des demandes</div>
+                        <div class="feature-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Réponse sous 24h</div>
+                        <div class="feature-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Paiement mobile (Orange Money, MTN)</div>
+                        <div class="feature-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Chat support temps réel</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="feature-card">
+                <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M12 9v6"/><path d="M9 12h6"/></svg></div>
+                <h3>Microcrédits</h3>
+                <p>Demandes de crédit en ligne avec dépôt de pièces, traitement en 4 étapes et décaissement rapide.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                <h3>Assurance mobile</h3>
+                <p>Souscrivez à une assurance adaptée à vos besoins et protégez vos biens en toute simplicité.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                <h3>Support client</h3>
+                <p>Un chat temps réel pour échanger avec nos agents et suivre vos demandes en direct.</p>
+            </div>
+        </section>
+
+        <div class="footer">COFINANCE CI © 2026 · Tous droits réservés</div>
+    </div>
+    <script>
+        if (localStorage.getItem('access_token')) {
+            const role = localStorage.getItem('user_role') || 'client';
+            const map = { 'client': '/app/client/dashboard/', 'agent': '/app/agent/dashboard/', 'admin': '/app/admin/dashboard/' };
+            window.location.href = map[role] || '/app/client/dashboard/';
+        }
+    </script>
+</body>
+</html>

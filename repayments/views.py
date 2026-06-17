@@ -28,10 +28,18 @@ class RepaymentListCreateView(generics.ListCreateAPIView):
         return qs
 
     def perform_create(self, serializer):
-        if not (self.request.user.is_agent or self.request.user.is_admin_user):
+        user = self.request.user
+        is_client_initiated = user.is_client
+        if not (user.is_agent or user.is_admin_user or is_client_initiated):
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Seuls les agents peuvent enregistrer un paiement.")
-        repayment = serializer.save(recorded_by=self.request.user)
+            raise PermissionDenied("Seuls les agents et les clients peuvent enregistrer un paiement.")
+        if is_client_initiated:
+            schedule = serializer.validated_data.get("schedule")
+            if schedule and schedule.credit.client != user:
+                raise PermissionDenied("Ce remboursement ne vous appartient pas.")
+            repayment = serializer.save(recorded_by=user)
+        else:
+            repayment = serializer.save(recorded_by=user)
         client = repayment.schedule.credit.client
         create_notification(
             client,

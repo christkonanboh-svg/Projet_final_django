@@ -54,35 +54,20 @@ class Command(BaseCommand):
             agent.set_password("agent123")
             agent.save()
 
-        client1, _ = User.objects.get_or_create(
-            username="client1",
+        client, _ = User.objects.get_or_create(
+            username="awa",
             defaults={
-                "email": "client1@example.ci",
+                "email": "awa.kone@example.ci",
                 "first_name": "Awa",
-                "last_name": "Traoré",
+                "last_name": "Koné",
                 "role": User.Role.CLIENT,
                 "region": User.Region.ABIDJAN,
                 "phone": "+2250700000101",
             },
         )
-        if not client1.has_usable_password():
-            client1.set_password("client123")
-            client1.save()
-
-        client2, _ = User.objects.get_or_create(
-            username="client2",
-            defaults={
-                "email": "client2@example.ci",
-                "first_name": "Moussa",
-                "last_name": "Koné",
-                "role": User.Role.CLIENT,
-                "region": User.Region.BOUAKE,
-                "phone": "+2250700000102",
-            },
-        )
-        if not client2.has_usable_password():
-            client2.set_password("client123")
-            client2.save()
+        if not client.has_usable_password():
+            client.set_password("awa123")
+            client.save()
 
         self.stdout.write("Création des produits d'assurance...")
         products_data = [
@@ -120,15 +105,15 @@ class Command(BaseCommand):
         now = timezone.now()
 
         if not CreditApplication.objects.exists():
-            # Crédit 1: client1 - approuvé, décaissé, avec remboursements
+            # Crédit 1: Décaissé avec remboursements
             credit1 = CreditApplication.objects.create(
-                client=client1,
+                client=client,
                 amount_requested=Decimal("250000"),
                 purpose="Achat de marchandises pour boutique",
                 duration_months=6,
                 repayment_frequency=CreditApplication.Frequency.MONTHLY,
                 status=CreditApplication.Status.DISBURSED,
-                eligibility_score=calculate_eligibility_score(client1, Decimal("250000")),
+                eligibility_score=calculate_eligibility_score(client, Decimal("250000")),
                 assigned_agent=agent,
                 region=User.Region.ABIDJAN,
                 interest_rate=Decimal("0.1200"),
@@ -137,107 +122,102 @@ class Command(BaseCommand):
             )
             generate_repayment_schedule(credit1)
 
-            # Crédit 2: client2 - en révision
-            credit2 = CreditApplication.objects.create(
-                client=client2,
+            # Crédit 2: En révision
+            CreditApplication.objects.create(
+                client=client,
                 amount_requested=Decimal("150000"),
                 purpose="Achat d'intrants agricoles",
                 duration_months=4,
                 repayment_frequency=CreditApplication.Frequency.WEEKLY,
                 status=CreditApplication.Status.IN_REVIEW,
-                eligibility_score=calculate_eligibility_score(client2, Decimal("150000")),
+                eligibility_score=calculate_eligibility_score(client, Decimal("150000")),
                 assigned_agent=agent,
-                region=User.Region.BOUAKE,
+                region=User.Region.ABIDJAN,
                 interest_rate=Decimal("0.1000"),
             )
 
-            # Crédit 3: client1 - soumis
-            credit3 = CreditApplication.objects.create(
-                client=client1,
+            # Crédit 3: Soumis
+            CreditApplication.objects.create(
+                client=client,
                 amount_requested=Decimal("100000"),
                 purpose="Réparation équipement de boutique",
                 duration_months=3,
                 repayment_frequency=CreditApplication.Frequency.MONTHLY,
                 status=CreditApplication.Status.SUBMITTED,
-                eligibility_score=calculate_eligibility_score(client1, Decimal("100000")),
+                eligibility_score=calculate_eligibility_score(client, Decimal("100000")),
                 region=User.Region.ABIDJAN,
             )
 
-            # Crédit 4: client2 - approuvé et décaissé
+            # Crédit 4: Approuvé et décaissé (second)
             credit4 = CreditApplication.objects.create(
-                client=client2,
+                client=client,
                 amount_requested=Decimal("500000"),
                 purpose="Agrandissement de l'exploitation agricole",
                 duration_months=12,
                 repayment_frequency=CreditApplication.Frequency.MONTHLY,
                 status=CreditApplication.Status.DISBURSED,
-                eligibility_score=calculate_eligibility_score(client2, Decimal("500000")),
+                eligibility_score=calculate_eligibility_score(client, Decimal("500000")),
                 assigned_agent=agent,
-                region=User.Region.BOUAKE,
+                region=User.Region.ABIDJAN,
                 interest_rate=Decimal("0.1500"),
                 approved_at=now - timedelta(days=20),
                 disbursed_at=now - timedelta(days=15),
             )
             generate_repayment_schedule(credit4)
 
-            # Crédit 5: client1 - rejeté
+            # Crédit 5: Rejeté
             CreditApplication.objects.create(
-                client=client1,
+                client=client,
                 amount_requested=Decimal("1000000"),
                 purpose="Financement véhicule",
                 duration_months=24,
                 repayment_frequency=CreditApplication.Frequency.MONTHLY,
                 status=CreditApplication.Status.REJECTED,
-                eligibility_score=calculate_eligibility_score(client1, Decimal("1000000")),
+                eligibility_score=calculate_eligibility_score(client, Decimal("1000000")),
                 assigned_agent=agent,
                 region=User.Region.ABIDJAN,
                 rejection_reason="Score d'éligibilité insuffisant pour le montant demandé",
             )
         else:
-            credit1 = CreditApplication.objects.filter(client=client1, status=CreditApplication.Status.DISBURSED).first()
-            credit4 = CreditApplication.objects.filter(client=client2, status=CreditApplication.Status.DISBURSED).first()
+            credit1 = CreditApplication.objects.filter(client=client, status=CreditApplication.Status.DISBURSED).first()
+            credit4 = CreditApplication.objects.filter(client=client, status=CreditApplication.Status.DISBURSED).order_by("-id").first()
 
         self.stdout.write("Enregistrement de remboursements...")
-        # Remboursements pour credit1 (client1)
-        schedules1 = RepaymentSchedule.objects.filter(credit__client=client1).order_by("installment_number")
-        for i, schedule in enumerate(schedules1):
-            if i == 0 and not Repayment.objects.filter(schedule=schedule).exists():
+        schedules = RepaymentSchedule.objects.filter(credit__client=client).order_by("credit_id", "installment_number")
+        for i, schedule in enumerate(schedules):
+            if Repayment.objects.filter(schedule=schedule).exists():
+                continue
+            if i == 0:
                 Repayment.objects.create(
                     schedule=schedule,
                     amount=schedule.amount_due,
                     payment_method="orange_money",
-                    reference=f"OM-C1-{i+1}",
+                    reference=f"OM-AWA-{i+1}",
                     recorded_by=agent,
                 )
-            elif i == 1 and not Repayment.objects.filter(schedule=schedule).exists():
+            elif i == 1:
                 Repayment.objects.create(
                     schedule=schedule,
                     amount=schedule.amount_due - Decimal("5000"),
                     payment_method="mtn_money",
-                    reference=f"MTN-C1-{i+1}",
+                    reference=f"MTN-AWA-{i+1}",
                     recorded_by=agent,
                     notes="Paiement partiel, solde à régulariser",
                 )
-
-        # Remboursements pour credit4 (client2)
-        schedules4 = RepaymentSchedule.objects.filter(credit__client=client2).order_by("installment_number")
-        for i, schedule in enumerate(schedules4):
-            if i == 0 and not Repayment.objects.filter(schedule=schedule).exists():
+            elif i == 2:
                 Repayment.objects.create(
                     schedule=schedule,
                     amount=schedule.amount_due,
                     payment_method="wave",
-                    reference=f"WAVE-C2-{i+1}",
+                    reference=f"WAVE-AWA-{i+1}",
                     recorded_by=agent,
                 )
 
         self.stdout.write("Création des souscriptions assurance...")
         if not InsuranceSubscription.objects.exists():
             start = timezone.now().date()
-
-            # Assurance vie pour client1
             InsuranceSubscription.objects.create(
-                client=client1,
+                client=client,
                 product=products[0],
                 start_date=start - relativedelta(months=2),
                 end_date=start + relativedelta(months=10),
@@ -245,10 +225,8 @@ class Command(BaseCommand):
                 policy_number="POL-DEMO001",
                 status=InsuranceSubscription.Status.ACTIVE,
             )
-
-            # Protection décès pour client1
             InsuranceSubscription.objects.create(
-                client=client1,
+                client=client,
                 product=products[1],
                 start_date=start - relativedelta(months=1),
                 end_date=start + relativedelta(months=5),
@@ -256,10 +234,8 @@ class Command(BaseCommand):
                 policy_number="POL-DEMO002",
                 status=InsuranceSubscription.Status.ACTIVE,
             )
-
-            # Multirisque pour client2
             InsuranceSubscription.objects.create(
-                client=client2,
+                client=client,
                 product=products[2],
                 start_date=start - relativedelta(months=3),
                 end_date=start + relativedelta(months=9),
@@ -269,35 +245,28 @@ class Command(BaseCommand):
             )
 
         self.stdout.write("Création des notifications...")
-        existing_notifs = Notification.objects.count()
-        if existing_notifs < 5:
+        if Notification.objects.count() < 5:
             notifications_data = [
                 {
-                    "user": client1,
+                    "user": client,
                     "title": "Bienvenue sur COFINANCE CI",
-                    "message": "Votre compte a été créé avec succès. Bienvenue !",
+                    "message": "Votre compte a été créé avec succès. Bienvenue Awa !",
                     "notification_type": "welcome",
                 },
                 {
-                    "user": client1,
+                    "user": client,
                     "title": "Crédit approuvé",
                     "message": "Votre demande de 250 000 FCFA a été approuvée.",
                     "notification_type": "credit_approved",
                 },
                 {
-                    "user": client1,
+                    "user": client,
                     "title": "Échéance de remboursement",
                     "message": "Votre prochaine échéance est prévue dans 3 jours.",
                     "notification_type": "repayment_reminder",
                 },
                 {
-                    "user": client2,
-                    "title": "Bienvenue sur COFINANCE CI",
-                    "message": "Votre compte a été créé avec succès. Bienvenue !",
-                    "notification_type": "welcome",
-                },
-                {
-                    "user": client2,
+                    "user": client,
                     "title": "Crédit en révision",
                     "message": "Votre demande de 150 000 FCFA est en cours d'analyse.",
                     "notification_type": "credit_review",
@@ -305,13 +274,13 @@ class Command(BaseCommand):
                 {
                     "user": agent,
                     "title": "Nouvelle demande de crédit",
-                    "message": "Moussa Koné a soumis une demande de 150 000 FCFA.",
+                    "message": "Awa Koné a soumis une demande de 150 000 FCFA.",
                     "notification_type": "new_credit",
                 },
                 {
                     "user": admin_user,
                     "title": "Rapport hebdomadaire",
-                    "message": "3 nouvelles demandes de crédit cette semaine.",
+                    "message": "5 nouvelles demandes de crédit cette semaine.",
                     "notification_type": "admin_report",
                 },
             ]
@@ -327,16 +296,15 @@ class Command(BaseCommand):
 
         self.stdout.write("Création des conversations de démonstration...")
 
-        # Conversation 1: client1 avec messages
         conv1, created = Conversation.objects.get_or_create(
-            client=client1,
+            client=client,
             subject="Question sur mon échéancier de remboursement",
             defaults={"agent": agent, "status": Conversation.Status.ASSIGNED},
         )
         if created:
             Message.objects.create(
                 conversation=conv1,
-                sender=client1,
+                sender=client,
                 content="Bonjour, je souhaiterais des explications sur mon échéancier de remboursement. Ma première échéance est déjà passée, mais j'aimerais connaître le montant exact de la prochaine.",
             )
             Message.objects.create(
@@ -346,7 +314,7 @@ class Command(BaseCommand):
             )
             Message.objects.create(
                 conversation=conv1,
-                sender=client1,
+                sender=client,
                 content="Merci pour ces informations. Est-ce que je peux rembourser par anticipation si j'ai des rentrées d'argent ?",
             )
             Message.objects.create(
@@ -355,29 +323,27 @@ class Command(BaseCommand):
                 content="Oui, tout à fait ! Le remboursement anticipé est possible sans pénalités. Vous pouvez passer par Orange Money, MTN Money ou Wave. Je vous envoie le détail par notification.",
             )
 
-        # Conversation 2: client2
         conv2, created = Conversation.objects.get_or_create(
-            client=client2,
+            client=client,
             subject="Suivi de ma demande de crédit agricole",
             defaults={"agent": agent, "status": Conversation.Status.OPEN},
         )
         if created:
             Message.objects.create(
                 conversation=conv2,
-                sender=client2,
+                sender=client,
                 content="Bonjour, j'ai déposé une demande de crédit de 150 000 FCFA pour l'achat d'intrants agricoles il y a une semaine. Pourriez-vous me donner des nouvelles ?",
             )
 
-        # Conversation 3: client1 fermée
         conv3, created = Conversation.objects.get_or_create(
-            client=client1,
+            client=client,
             subject="Demande d'information sur les assurances",
             defaults={"agent": agent, "status": Conversation.Status.CLOSED},
         )
         if created:
             Message.objects.create(
                 conversation=conv3,
-                sender=client1,
+                sender=client,
                 content="Bonjour, quels sont les produits d'assurance proposés par COFINANCE ?",
             )
             Message.objects.create(
@@ -387,7 +353,7 @@ class Command(BaseCommand):
             )
             Message.objects.create(
                 conversation=conv3,
-                sender=client1,
+                sender=client,
                 content="En effet, merci pour les informations !",
             )
             Message.objects.create(
@@ -398,7 +364,6 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS("\nDonnées de démonstration chargées avec succès !"))
         self.stdout.write("\nComptes de test :")
-        self.stdout.write("  Admin  : admin / admin123")
-        self.stdout.write("  Agent  : agent1 / agent123")
-        self.stdout.write("  Client : client1 / client123")
-        self.stdout.write("  Client : client2 / client123")
+        self.stdout.write("  Admin : admin / admin123")
+        self.stdout.write("  Agent : agent1 / agent123")
+        self.stdout.write("  Client : awa / awa123")

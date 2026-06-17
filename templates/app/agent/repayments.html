@@ -1,0 +1,56 @@
+{% extends "app/base.html" %}
+{% block title %}Agent - Remboursements{% endblock %}
+{% block page_title %}Remboursements{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Échéanciers clients</h1><p>Suivez les remboursements</p></div>
+<div class="card"><div class="card-body" id="schedulesContainer"><div class="loading">Chargement</div></div></div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+async function loadSchedules() {
+    try {
+        const res = await fetch(`${API}/api/repayments/schedules/`, { headers: authHeaders() });
+        const data = await res.json();
+        const schedules = data.results || data || [];
+        renderSchedules(schedules);
+    } catch { document.getElementById('schedulesContainer').innerHTML = '<div class="empty-state"><p>Erreur de chargement</p></div>'; }
+}
+function renderSchedules(schedules) {
+    const container = document.getElementById('schedulesContainer');
+    if (!schedules.length) {
+        container.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><h3>Aucune échéance</h3><p>Aucun remboursement enregistré</p></div>'; return;
+    }
+    const grouped = {};
+    schedules.forEach(s => {
+        const key = s.credit_id;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(s);
+    });
+    container.innerHTML = Object.keys(grouped).map(creditId => {
+        const items = grouped[creditId];
+        const totalDue = items.reduce((a, s) => a + parseFloat(s.amount_due), 0);
+        const totalPaid = items.reduce((a, s) => a + parseFloat(s.amount_paid), 0);
+        const rate = totalDue > 0 ? Math.round(totalPaid / totalDue * 100) : 0;
+        const clientName = items[0].client_name || `Client #${items[0].client}`;
+        return `<div style="margin-bottom:1.5rem">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+                <h3 style="font-size:0.9rem;color:var(--text-secondary)">Crédit #${creditId} — ${clientName}</h3>
+                <span style="font-size:0.8rem;font-weight:600;color:var(--primary)">${rate}% remboursé</span>
+            </div>
+            <div style="height:6px;background:var(--border-light);border-radius:3px;overflow:hidden;margin-bottom:0.75rem"><div style="height:100%;width:${rate}%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:3px"></div></div>
+            <div class="table-wrapper"><table><thead><tr><th>#</th><th>Échéance</th><th>Montant</th><th>Payé</th><th>Statut</th><th>Date</th></tr></thead><tbody>
+            ${items.map(s => `<tr>
+                <td>#${s.id}</td>
+                <td>Échéance ${s.installment_number}</td>
+                <td><strong>${formatCurrency(s.amount_due)}</strong></td>
+                <td>${formatCurrency(s.amount_paid)}</td>
+                <td><span class="badge ${statusBadgeClass(s.status)}">${statusLabel(s.status)}</span></td>
+                <td>${formatDate(s.due_date)}</td>
+            </tr>`).join('')}
+            </tbody></table></div>
+        </div>`;
+    }).join('');
+}
+loadSchedules();
+</script>
+{% endblock %}

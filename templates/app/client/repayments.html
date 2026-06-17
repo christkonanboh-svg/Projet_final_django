@@ -2,8 +2,34 @@
 {% block title %}COFINANCE CI - Remboursements{% endblock %}
 {% block page_title %}Remboursements{% endblock %}
 {% block content %}
-<div class="page-header"><h1>Échéancier</h1><p>Suivez vos remboursements</p></div>
+<div class="page-header"><h1>Échéancier</h1><p>Suivez et effectuez vos remboursements</p></div>
 <div class="card"><div class="card-body" id="schedulesContainer"><div class="loading">Chargement</div></div></div>
+
+<div class="modal-overlay" id="payModal">
+    <div class="modal" style="max-width:440px">
+        <div class="modal-header"><span>Effectuer un paiement</span><button class="close-btn" onclick="closeModal('payModal')">✕</button></div>
+        <div class="modal-body">
+            <div style="background:var(--bg);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem">
+                <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:0.5rem"><span>Échéance</span><strong id="payInstallment">-</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:0.5rem"><span>Montant dû</span><strong id="payAmountDue">-</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.85rem"><span>Crédit</span><strong id="payCreditId">-</strong></div>
+            </div>
+            <input type="hidden" id="payScheduleId">
+            <div class="form-group"><label>Montant à payer</label><input type="number" id="payAmount" min="1" step="1"></div>
+            <div class="form-group"><label>Moyen de paiement</label>
+                <select id="payMethod">
+                    <option value="orange_money">Orange Money</option>
+                    <option value="mtn_money">MTN Mobile Money</option>
+                    <option value="wave">Wave</option>
+                    <option value="cash">Espèces (agence)</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Référence (optionnel)</label><input type="text" id="payRef" placeholder="Numéro de transaction"></div>
+            <p class="error-msg" id="payError"></p>
+            <button class="btn w-full" onclick="submitPayment()" id="payBtn">Confirmer le paiement</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 {% block extra_scripts %}
 <script>
@@ -15,6 +41,44 @@ async function loadSchedules() {
         renderSchedules(schedules);
     } catch { document.getElementById('schedulesContainer').innerHTML = '<div class="empty-state"><p>Erreur de chargement</p></div>'; }
 }
+function statusLabel(s) {
+    const labels = { pending: 'À payer', paid: 'Payée', overdue: 'En retard', partial: 'Partielle' };
+    return labels[s] || s;
+}
+function statusBadgeClass(s) {
+    const map = { pending: 'badge-gray', paid: 'badge-green', overdue: 'badge-rose', partial: 'badge-blue' };
+    return map[s] || 'badge-gray';
+}
+function openPay(schedule) {
+    document.getElementById('payScheduleId').value = schedule.id;
+    document.getElementById('payInstallment').textContent = 'Échéance #' + schedule.installment_number;
+    document.getElementById('payAmountDue').textContent = formatCurrency(schedule.amount_due);
+    document.getElementById('payCreditId').textContent = '#' + schedule.credit_id;
+    document.getElementById('payAmount').value = schedule.amount_due;
+    document.getElementById('payMethod').value = 'orange_money';
+    document.getElementById('payRef').value = '';
+    document.getElementById('payError').textContent = '';
+    openModal('payModal');
+}
+async function submitPayment() {
+    const scheduleId = document.getElementById('payScheduleId').value;
+    const amount = document.getElementById('payAmount').value;
+    const method = document.getElementById('payMethod').value;
+    const ref = document.getElementById('payRef').value;
+    const btn = document.getElementById('payBtn');
+    const errEl = document.getElementById('payError');
+    errEl.textContent = '';
+    if (!amount || amount <= 0) { errEl.textContent = 'Montant invalide'; return; }
+    btn.disabled = true; btn.textContent = 'Paiement en cours...';
+    try {
+        const res = await fetch(`${API}/api/repayments/`, { method:'POST', headers:authHeaders(), body:JSON.stringify({ schedule: parseInt(scheduleId), amount: parseFloat(amount), payment_method: method, reference: ref || '' }) });
+        if (!res.ok) { const e = await res.json(); throw new Error(Object.values(e).flat().join(', ')); }
+        showToast('Paiement enregistré ✅','success');
+        closeModal('payModal');
+        loadSchedules();
+    } catch(e) { errEl.textContent = e.message; }
+    finally { btn.disabled = false; btn.textContent = 'Confirmer le paiement'; }
+}
 function renderSchedules(schedules) {
     const container = document.getElementById('schedulesContainer');
     if (!schedules.length) {
@@ -23,16 +87,35 @@ function renderSchedules(schedules) {
     let totalDue = 0, totalPaid = 0;
     schedules.forEach(s => { totalDue += parseFloat(s.amount_due); totalPaid += parseFloat(s.amount_paid); });
     const rate = totalDue > 0 ? Math.round(totalPaid/totalDue*100) : 0;
+    const grouped = {};
+    schedules.forEach(s => {
+        const key = s.credit_id;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(s);
+    });
     container.innerHTML = `
     <div class="grid-3" style="margin-bottom:1.5rem">
         <div class="stat-card" style="padding:1rem"><div class="stat-value" style="font-size:1.2rem">${formatCurrency(totalDue)}</div><div class="stat-label">Total dû</div></div>
         <div class="stat-card" style="padding:1rem"><div class="stat-value" style="font-size:1.2rem">${formatCurrency(totalPaid)}</div><div class="stat-label">Total payé</div></div>
-        <div class="stat-card" style="padding:1rem"><div class="stat-value" style="font-size:1.2rem">${rate}%</div><div class="stat-label">Taux remboursement</div></div>
+        <div class="stat-card" style="padding:1rem"><div class="stat-value" style="font-size:1.2rem">${rate}%</div><div class="stat-label">Remboursement</div></div>
     </div>
     <div style="height:10px;background:var(--border-light);border-radius:5px;overflow:hidden;margin-bottom:1.5rem"><div style="height:100%;width:${rate}%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:5px"></div></div>
-    <div class="table-wrapper"><table><thead><tr><th>#</th><th>Échéance</th><th>Montant</th><th>Payé</th><th>Pénalité</th><th>Statut</th><th>Date</th></tr></thead><tbody>
-    ${schedules.map(s => `<tr><td>#${s.id}</td><td>Échéance ${s.installment_number}</td><td><strong>${formatCurrency(s.amount_due)}</strong></td><td>${formatCurrency(s.amount_paid)}</td><td>${parseFloat(s.penalty_amount) > 0 ? formatCurrency(s.penalty_amount) : '-'}</td><td><span class="badge ${statusBadgeClass(s.status)}">${statusLabel(s.status)}</span></td><td>${formatDate(s.due_date)}</td></tr>`).join('')}
-    </tbody></table></div>`;
+    ${Object.keys(grouped).map(creditId => `
+        <div style="margin-bottom:1.5rem">
+            <h3 style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:0.75rem">Crédit #${creditId}</h3>
+            <div class="table-wrapper"><table><thead><tr><th>#</th><th>Échéance</th><th>Montant</th><th>Payé</th><th>Statut</th><th>Date</th><th></th></tr></thead><tbody>
+            ${grouped[creditId].map(s => `<tr>
+                <td>#${s.id}</td>
+                <td>Échéance ${s.installment_number}</td>
+                <td><strong>${formatCurrency(s.amount_due)}</strong></td>
+                <td>${formatCurrency(s.amount_paid)}</td>
+                <td><span class="badge ${statusBadgeClass(s.status)}">${statusLabel(s.status)}</span></td>
+                <td>${formatDate(s.due_date)}</td>
+                <td>${s.status !== 'paid' ? `<button class="btn btn-xs btn-primary" onclick="openPay(${JSON.stringify(s).replace(/"/g,'&quot;')})">Payer</button>` : '<span style="font-size:0.75rem;color:var(--text-muted)">✓</span>'}</td>
+            </tr>`).join('')}
+            </tbody></table></div>
+        </div>
+    `).join('')}`;
 }
 loadSchedules();
 </script>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COFINANCE CI - Créer un compte</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #0d7a3f; --primary-dark: #065a2c; --accent: #00b894;
+            --text: #1a1a2e; --text-secondary: #6b7280; --text-muted: #9ca3af;
+            --border: #e5e7eb; --border-light: #f0f0f0;
+            --surface: #ffffff; --bg: #f8fbf8;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 24px rgba(0,0,0,0.08);
+            --radius-sm: 8px; --radius-md: 16px; --radius-lg: 24px;
+            --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 1.5rem;
+        }
+        .register-container { width: 100%; max-width: 480px; animation: fadeInUp 0.6s both; }
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 2.5rem 2rem;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-light);
+        }
+        .card h1 { text-align: center; font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem; }
+        .card h1 span { background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .card .subtitle { text-align: center; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 2rem; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.35rem; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 0.75rem 1rem;
+            border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+            font-size: 0.9rem; font-family: inherit;
+            transition: var(--transition); background: var(--bg); outline: none;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(13,122,63,0.1); background: var(--surface); }
+        .btn {
+            width: 100%; padding: 0.85rem 1.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white; border: none; border-radius: var(--radius-sm);
+            font-size: 0.95rem; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: var(--transition); margin-top: 1rem;
+        }
+        .btn:hover { box-shadow: 0 4px 20px rgba(13,122,63,0.3); transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .error-msg { color: #dc2626; font-size: 0.85rem; margin-top: 0.75rem; text-align: center; }
+        .footer-links { text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted); }
+        .footer-links a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        @media (max-width: 480px) { .grid-2 { grid-template-columns: 1fr; } .card { padding: 2rem 1.25rem; } }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="card">
+            <h1>CO<span>FINANCE</span> CI</h1>
+            <p class="subtitle">Créez votre compte client</p>
+            <div class="grid-2">
+                <div class="form-group"><label>Prénom</label><input type="text" id="regFirstName" placeholder="Votre prénom"></div>
+                <div class="form-group"><label>Nom</label><input type="text" id="regLastName" placeholder="Votre nom"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>Identifiant</label><input type="text" id="regUsername" placeholder="Choisissez un identifiant"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="votre@email.com"></div>
+            </div>
+            <div class="form-group"><label>Mot de passe</label><input type="password" id="regPassword" placeholder="Minimum 6 caractères"></div>
+            <div class="grid-2">
+                <div class="form-group"><label>Téléphone</label><input type="text" id="regPhone" placeholder="+225 00 00 00 00"></div>
+                <div class="form-group"><label>Région</label><select id="regRegion"><option value="">Sélectionner</option><option value="abidjan">Abidjan</option><option value="bouake">Bouaké</option><option value="san_pedro">San-Pédro</option><option value="korhogo">Korhogo</option><option value="yamoussoukro">Yamoussoukro</option></select></div>
+            </div>
+            <p class="error-msg" id="regError"></p>
+            <button class="btn" onclick="register()" id="regBtn">Créer mon compte</button>
+            <div class="footer-links">Déjà un compte ? <a href="/app/login/">Connectez-vous</a></div>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin;
+        async function register() {
+            const data = {
+                username: document.getElementById('regUsername').value,
+                email: document.getElementById('regEmail').value,
+                first_name: document.getElementById('regFirstName').value,
+                last_name: document.getElementById('regLastName').value,
+                password: document.getElementById('regPassword').value,
+                phone: document.getElementById('regPhone').value,
+                region: document.getElementById('regRegion').value,
+                role: 'client',
+            };
+            const btn = document.getElementById('regBtn');
+            const errEl = document.getElementById('regError');
+            errEl.textContent = '';
+            if (!data.username || !data.password || !data.first_name) { errEl.textContent = 'Prénom, identifiant et mot de passe requis'; return; }
+            if (data.password.length < 6) { errEl.textContent = 'Mot de passe minimum 6 caractères'; return; }
+            btn.disabled = true; btn.textContent = 'Inscription...';
+            try {
+                const res = await fetch(`${API}/api/auth/register/`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+                if (!res.ok) { const err = await res.json(); throw new Error(Object.values(err).flat().join(', ')); }
+                const result = await res.json();
+                localStorage.setItem('access_token', result.access);
+                if (result.refresh) localStorage.setItem('refresh_token', result.refresh);
+                localStorage.setItem('user_role', 'client');
+                window.location.href = '/app/client/dashboard/';
+            } catch(e) { errEl.textContent = e.message; btn.disabled = false; btn.textContent = 'Créer mon compte'; }
+        }
+        if (localStorage.getItem('access_token')) {
+            const role = localStorage.getItem('user_role') || 'client';
+            const map = { 'client': '/app/client/dashboard/', 'agent': '/app/agent/dashboard/', 'admin': '/app/admin/dashboard/' };
+            window.location.href = map[role] || '/app/client/dashboard/';
+        }
+    </script>
+</body>
+</html>

@@ -1,8 +1,16 @@
 from django.views.generic import TemplateView
 
 
+class AppIndexView(TemplateView):
+    template_name = "app/index.html"
+
+
 class AppLoginView(TemplateView):
     template_name = "app/login.html"
+
+
+class AppRegisterView(TemplateView):
+    template_name = "app/register.html"
 
 
 # Client
@@ -51,6 +59,14 @@ class AgentNotificationsView(TemplateView):
     template_name = "app/agent/notifications.html"
 
 
+class AgentInsuranceView(TemplateView):
+    template_name = "app/agent/insurance.html"
+
+
+class AgentRepaymentsView(TemplateView):
+    template_name = "app/agent/repayments.html"
+
+
 class AgentProfileView(TemplateView):
     template_name = "app/agent/profile.html"
 
@@ -82,6 +98,10 @@ class AdminAgentsView(TemplateView):
 
 class AdminNotificationsView(TemplateView):
     template_name = "app/admin/notifications.html"
+
+
+class AdminRepaymentsView(TemplateView):
+    template_name = "app/admin/repayments.html"
 
 
 class AdminProfileView(TemplateView):
