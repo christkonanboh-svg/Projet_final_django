@@ -1,0 +1,31 @@
+{% extends "app/base.html" %}
+{% block title %}Admin - Agents{% endblock %}
+{% block page_title %}Agents en ligne{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Agents en ligne</h1><p>Liste des agents et administrateurs connectés</p></div>
+<div class="card"><div class="card-body" id="agentsContainer"><div class="loading">Chargement</div></div></div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+async function loadAgents() {
+    try {
+        const res = await fetch(`${API}/api/auth/agents/online/`, { headers: authHeaders() });
+        const agents = await res.json();
+        const container = document.getElementById('agentsContainer');
+        if (!agents.length) { container.innerHTML = '<div class="empty-state"><p>Aucun agent en ligne</p></div>'; return; }
+        container.innerHTML = '<div class="grid-2">' +
+            agents.map(a => `<div class="card" style="padding:1.25rem;border:1px solid var(--border-light)">
+                <div style="display:flex;align-items:center;gap:1rem">
+                    <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:1rem">${(a.first_name||a.username||'A')[0].toUpperCase()}</div>
+                    <div><div style="font-weight:600;font-size:0.95rem">${a.first_name||a.username} ${a.last_name||''}</div>
+                    <div style="font-size:0.8rem;color:var(--text-muted)">${a.role_display||a.role}</div>
+                    <div style="font-size:0.8rem;color:var(--text-muted)">${a.region_display||'-'}</div></div>
+                    <div style="margin-left:auto"><span class="badge badge-green">● En ligne</span></div>
+                </div>
+            </div>`).join('') + '</div>';
+        setTimeout(loadAgents, 15000);
+    } catch {}
+}
+loadAgents();
+</script>
+{% endblock %}

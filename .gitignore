@@ -1,0 +1,14 @@
+venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+db.sqlite3
+media/
+.env
+.idea/
+.vscode/
+*.log
+.DS_Store
+daphne_*.txt
+schema.json
+staticfiles/

@@ -1,0 +1,24 @@
+{% extends "app/base.html" %}
+{% block title %}Admin - Assurances{% endblock %}
+{% block page_title %}Assurances{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Toutes les souscriptions</h1><p>Supervision des assurances</p></div>
+<div class="card"><div class="card-body" id="insContainer"><div class="loading">Chargement</div></div></div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+async function loadAllSubs() {
+    try {
+        const res = await fetch(`${API}/api/insurance/subscriptions/`, { headers: authHeaders() });
+        const data = await res.json();
+        const subs = data.results || data || [];
+        const container = document.getElementById('insContainer');
+        if (!subs.length) { container.innerHTML = '<div class="empty-state"><p>Aucune souscription</p></div>'; return; }
+        container.innerHTML = '<div class="table-wrapper"><table><thead><tr><th>Police</th><th>Client</th><th>Produit</th><th>Prime</th><th>Statut</th><th>Début</th><th>Fin</th></tr></thead><tbody>' +
+            subs.map(s => `<tr><td><strong>${s.policy_number}</strong></td><td>${s.client_name||'#'+s.client}</td><td>${s.product_detail?.name||'-'}</td><td>${formatCurrency(s.premium_paid)}</td><td><span class="badge ${statusBadgeClass(s.status)}">${statusLabel(s.status)}</span></td><td>${formatDate(s.start_date)}</td><td>${formatDate(s.end_date)}</td></tr>`).join('') +
+            '</tbody></table></div>';
+    } catch {}
+}
+loadAllSubs();
+</script>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends "app/base.html" %}
+{% block title %}Agent - Gestion Crédits{% endblock %}
+{% block page_title %}Gestion des crédits{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Crédits</h1><p>Gérez et traitez les demandes de crédit</p></div>
+<div class="card"><div class="card-body" id="creditsContainer"><div class="loading">Chargement</div></div></div>
+
+<div class="modal-overlay" id="statusModal">
+    <div class="modal">
+        <div class="modal-header"><span>Mettre à jour le statut</span><button class="close-btn" onclick="closeModal('statusModal')">✕</button></div>
+        <div class="modal-body">
+            <input type="hidden" id="statusCreditId">
+            <div class="form-group"><label>Nouveau statut</label><select id="statusSelect"><option value="in_review">En analyse</option><option value="approved">Approuvé</option><option value="rejected">Rejeté</option></select></div>
+            <div class="form-group" id="agentAssignGroup" style="display:none"><label>Assigner à un agent</label><select id="assignAgentSelect"><option value="">Moi-même</option></select></div>
+            <div class="form-group" id="rejectReasonGroup" style="display:none"><label>Motif du rejet</label><textarea id="rejectReason" rows="3" placeholder="Raison du rejet..."></textarea></div>
+            <button class="btn w-full" onclick="updateCreditStatus()">Confirmer</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="detailModal">
+    <div class="modal">
+        <div class="modal-header"><span>Détail du crédit</span><button class="close-btn" onclick="closeModal('detailModal')">✕</button></div>
+        <div class="modal-body" id="detailBody"></div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+let allCredits = [];
+async function loadCredits() {
+    try {
+        const res = await fetch(`${API}/api/credits/`, { headers: authHeaders() });
+        const data = await res.json();
+        allCredits = data.results || data || [];
+        renderCredits();
+    } catch { document.getElementById('creditsContainer').innerHTML = '<div class="empty-state"><p>Erreur</p></div>'; }
+}
+function renderCredits() {
+    const container = document.getElementById('creditsContainer');
+    if (!allCredits.length) { container.innerHTML = '<div class="empty-state"><p>Aucun crédit</p></div>'; return; }
+    container.innerHTML = '<div class="table-wrapper"><table><thead><tr><th>#</th><th>Client</th><th>Montant</th><th>Statut</th><th>Score</th><th>Date</th><th>Agent</th><th></th></tr></thead><tbody>' +
+        allCredits.map(c => `<tr><td>#${c.id}</td><td>${c.client_name || 'Client #'+c.client}</td><td><strong>${formatCurrency(c.amount_requested)}</strong></td><td><span class="badge ${statusBadgeClass(c.status)}">${statusLabel(c.status)}</span></td><td>${c.eligibility_score||'-'}</td><td>${formatDate(c.submitted_at)}</td><td>${c.assigned_agent_name||'-'}</td><td><div class="flex gap-2"><button class="btn btn-xs btn-ghost" onclick="viewCredit(${c.id})">Détail</button>${c.status==='submitted'||c.status==='in_review'?`<button class="btn btn-xs btn-primary" onclick="openStatusModal(${c.id},'${c.status}')">Traiter</button>`:''}</div></td></tr>`).join('') +
+        '</tbody></table></div>';
+}
+async function viewCredit(id) {
+    try {
+        const c = allCredits.find(x => x.id === id);
+        document.getElementById('detailBody').innerHTML = `
+            <div class="grid-2" style="gap:1rem">
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Client</div><div style="font-weight:600">${c.client_name||'#'+c.client}</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Montant</div><div style="font-weight:700">${formatCurrency(c.amount_requested)}</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Statut</div><div><span class="badge ${statusBadgeClass(c.status)}">${statusLabel(c.status)}</span></div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Score</div><div style="font-weight:700">${c.eligibility_score||'-'}/100</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Durée</div><div>${c.duration_months} mois</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Fréquence</div><div>${c.repayment_frequency === 'weekly' ? 'Hebdo' : 'Mensuel'}</div></div>
+            </div>
+            <div class="mt-4"><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Objet</div><p class="mt-4">${c.purpose}</p></div>
+            ${c.assigned_agent_name ? `<div class="mt-4"><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Agent assigné</div><div>${c.assigned_agent_name}</div></div>` : ''}
+            ${c.rejection_reason ? `<div class="mt-4"><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Motif rejet</div><div style="color:var(--danger)">${c.rejection_reason}</div></div>` : ''}`;
+        openModal('detailModal');
+    } catch { showToast('Erreur','error'); }
+}
+async function openStatusModal(id, currentStatus) {
+    document.getElementById('statusCreditId').value = id;
+    const sel = document.getElementById('statusSelect');
+    sel.innerHTML = '';
+    const opts = currentStatus === 'submitted' ? ['in_review','rejected'] : ['approved','rejected'];
+    const labels = { 'in_review':'En analyse','approved':'Approuvé','rejected':'Rejeté' };
+    opts.forEach(o => { sel.innerHTML += `<option value="${o}">${labels[o]||o}</option>`; });
+    document.getElementById('rejectReasonGroup').style.display = 'none';
+    document.getElementById('agentAssignGroup').style.display = 'none';
+    openModal('statusModal');
+    document.getElementById('statusSelect').onchange = function() {
+        document.getElementById('rejectReasonGroup').style.display = this.value === 'rejected' ? '' : 'none';
+        document.getElementById('agentAssignGroup').style.display = this.value === 'in_review' ? '' : 'none';
+    };
+    try {
+        const res = await fetch(`${API}/api/auth/agents/online/`, { headers: authHeaders() });
+        const agents = await res.json();
+        const selAgent = document.getElementById('assignAgentSelect');
+        selAgent.innerHTML = '<option value="">Moi-même</option>';
+        agents.forEach(a => { selAgent.innerHTML += `<option value="${a.id}">${a.first_name||a.username}</option>`; });
+    } catch {}
+}
+async function updateCreditStatus() {
+    const id = document.getElementById('statusCreditId').value;
+    const status = document.getElementById('statusSelect').value;
+    const body = { status };
+    if (status === 'rejected') body.rejection_reason = document.getElementById('rejectReason').value;
+    if (status === 'in_review') { const agent = document.getElementById('assignAgentSelect').value; if (agent) body.assigned_agent = parseInt(agent); }
+    try {
+        const res = await fetch(`${API}/api/credits/${id}/status/`, { method:'PATCH', headers:authHeaders(), body:JSON.stringify(body) });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Erreur'); }
+        showToast('Statut mis à jour ✅','success');
+        closeModal('statusModal');
+        loadCredits();
+    } catch(e) { showToast(e.message,'error'); }
+}
+loadCredits();
+</script>
+{% endblock %}

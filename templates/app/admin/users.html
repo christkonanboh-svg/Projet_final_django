@@ -1,0 +1,66 @@
+{% extends "app/base.html" %}
+{% block title %}Admin - Utilisateurs{% endblock %}
+{% block page_title %}Gestion des utilisateurs{% endblock %}
+{% block content %}
+<div class="page-header flex items-center justify-between">
+    <div><h1>Utilisateurs</h1><p>Gérez les comptes</p></div>
+    <button class="btn btn-primary" onclick="openModal('createUserModal')">+ Nouvel utilisateur</button>
+</div>
+<div class="card"><div class="card-body" id="usersContainer"><div class="loading">Chargement</div></div></div>
+
+<div class="modal-overlay" id="createUserModal">
+    <div class="modal">
+        <div class="modal-header"><span>Créer un utilisateur</span><button class="close-btn" onclick="closeModal('createUserModal')">✕</button></div>
+        <div class="modal-body">
+            <div class="form-group"><label>Identifiant</label><input type="text" id="newUsername"></div>
+            <div class="form-group"><label>Email</label><input type="email" id="newEmail"></div>
+            <div class="form-group"><label>Prénom</label><input type="text" id="newFirstName"></div>
+            <div class="form-group"><label>Nom</label><input type="text" id="newLastName"></div>
+            <div class="form-group"><label>Mot de passe</label><input type="password" id="newPassword" placeholder="Min 8 caractères"></div>
+            <div class="form-group"><label>Rôle</label><select id="newRole"><option value="client">Client</option><option value="agent">Agent</option><option value="admin">Administrateur</option></select></div>
+            <div class="form-group"><label>Téléphone</label><input type="text" id="newPhone"></div>
+            <div class="form-group"><label>Région</label><select id="newRegion"><option value="">Sélectionner</option><option value="abidjan">Abidjan</option><option value="bouake">Bouaké</option><option value="san_pedro">San-Pédro</option><option value="korhogo">Korhogo</option><option value="yamoussoukro">Yamoussoukro</option></select></div>
+            <button class="btn w-full" onclick="createUser()">Créer</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+async function loadUsers() {
+    try {
+        const res = await fetch(`${API}/api/auth/users/`, { headers: authHeaders() });
+        const data = await res.json();
+        const users = data.results || data || [];
+        const container = document.getElementById('usersContainer');
+        container.innerHTML = '<div class="table-wrapper"><table><thead><tr><th>#</th><th>Nom</th><th>Rôle</th><th>Email</th><th>Région</th><th>En ligne</th><th>Date</th></tr></thead><tbody>' +
+            users.map(u => `<tr><td>#${u.id}</td><td><strong>${u.first_name||u.username} ${u.last_name||''}</strong></td><td><span class="badge ${u.role==='admin'?'badge-rose':u.role==='agent'?'badge-blue':'badge-green'}">${u.role_display||u.role}</span></td><td>${u.email||'-'}</td><td>${u.region_display||'-'}</td><td><span class="badge ${u.is_online?'badge-green':'badge-gray'}">${u.is_online?'Oui':'Non'}</span></td><td>${formatDate(u.date_joined)}</td></tr>`).join('') +
+            '</tbody></table></div>';
+    } catch {}
+}
+
+async function createUser() {
+    const data = {
+        username: document.getElementById('newUsername').value,
+        email: document.getElementById('newEmail').value,
+        first_name: document.getElementById('newFirstName').value,
+        last_name: document.getElementById('newLastName').value,
+        password: document.getElementById('newPassword').value,
+        role: document.getElementById('newRole').value,
+        phone: document.getElementById('newPhone').value,
+        region: document.getElementById('newRegion').value,
+    };
+    if (!data.username || !data.password) { showToast('Identifiant et mot de passe requis','error'); return; }
+    if (data.password.length < 8) { showToast('Mot de passe min 8 caractères','error'); return; }
+    try {
+        const res = await fetch(`${API}/api/auth/users/create/`, { method:'POST', headers:authHeaders(), body:JSON.stringify(data) });
+        if (!res.ok) { const err = await res.json(); throw new Error(Object.values(err).flat().join(', ')); }
+        showToast('Utilisateur créé ✅','success');
+        closeModal('createUserModal');
+        loadUsers();
+    } catch(e) { showToast(e.message,'error'); }
+}
+
+loadUsers();
+</script>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "app/base.html" %}
+{% block title %}COFINANCE CI - Support{% endblock %}
+{% block page_title %}Support client{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Support</h1><p>Échangez avec un conseiller</p></div>
+<div class="card" style="height:calc(100vh - 260px);display:flex;flex-direction:column">
+    <div id="chatPanel" style="display:flex;flex:1;flex-direction:column;min-height:0">
+        <div style="padding:0.75rem 1rem;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:500"><span style="width:8px;height:8px;border-radius:50%;background:var(--success)" id="chatStatusDot"></span><span id="chatStatusText">Connexion...</span><span style="margin-left:auto;font-size:0.75rem;color:var(--text-muted)" id="convSubject">Conversation</span></div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div style="padding:0 1rem;font-size:0.8rem;color:var(--text-muted);font-style:italic;min-height:1.2rem" id="typingIndicator"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Votre message..." onkeydown="if(event.key==='Enter')sendChatMsg()">
+            <button class="btn btn-primary" onclick="sendChatMsg()">Envoyer</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+let chatWs = null, chatConversationId = null, chatToken = null, chatReconnectTimer = null;
+
+async function connectChat() {
+    chatToken = localStorage.getItem('access_token');
+    if (!chatToken) { document.getElementById('chatStatusText').textContent = 'Non connecté'; return; }
+    try {
+        const res = await fetch(`${API}/api/chat/conversations/`, { headers: { 'Authorization': `Bearer ${chatToken}` } });
+        const data = await res.json();
+        const conversations = data.results || data || [];
+        const open = conversations.find(c => c.status !== 'closed');
+        if (open) { chatConversationId = open.id; document.getElementById('convSubject').textContent = open.subject; startChat(); }
+        else { const cr = await fetch(`${API}/api/chat/conversations/`, { method:'POST', headers:{'Authorization':`Bearer ${chatToken}`,'Content-Type':'application/json'}, body:JSON.stringify({subject:'Support client'}) }); const conv = await cr.json(); chatConversationId = conv.id; document.getElementById('convSubject').textContent = conv.subject; startChat(); }
+    } catch(e) { document.getElementById('chatStatusText').textContent = 'Erreur'; setTimeout(connectChat, 3000); }
+}
+function startChat() {
+    loadMessages();
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    chatWs = new WebSocket(`${protocol}//${window.location.host}/ws/chat/${chatConversationId}/?token=${encodeURIComponent(chatToken)}`);
+    chatWs.onopen = () => { document.getElementById('chatStatusDot').style.background = 'var(--success)'; document.getElementById('chatStatusText').textContent = 'Connecté'; if (chatReconnectTimer) { clearTimeout(chatReconnectTimer); chatReconnectTimer = null; } };
+    chatWs.onerror = () => { document.getElementById('chatStatusText').textContent = 'Erreur de connexion'; };
+    chatWs.onclose = () => { document.getElementById('chatStatusDot').style.background = 'var(--danger)'; document.getElementById('chatStatusText').textContent = 'Déconnecté'; chatWs = null; if (chatConversationId) chatReconnectTimer = setTimeout(connectChat, 5000); };
+    chatWs.onmessage = (e) => {
+        const d = JSON.parse(e.data);
+        if (d.type === 'message') appendChatMsg(d.message, d.message.sender_role === 'client');
+        else if (d.type === 'typing') document.getElementById('typingIndicator').textContent = d.is_typing ? `${d.username} écrit...` : '';
+        else if (d.type === 'presence') { document.getElementById('chatStatusDot').style.background = d.is_online ? 'var(--success)' : 'var(--text-muted)'; document.getElementById('chatStatusText').textContent = d.is_online ? 'Agent en ligne' : 'Agent hors ligne'; }
+    };
+}
+async function loadMessages() {
+    try {
+        const res = await fetch(`${API}/api/chat/conversations/${chatConversationId}/messages/`, { headers: { 'Authorization': `Bearer ${chatToken}` } });
+        const data = await res.json(); const msgs = data.results || data || [];
+        const container = document.getElementById('chatMessages'); container.innerHTML = '';
+        msgs.forEach(m => appendChatMsg(m, m.sender_role === 'client'));
+    } catch {}
+}
+function appendChatMsg(msg, isSent) {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div'); div.className = `chat-msg ${isSent ? 'sent' : 'received'}`;
+    const name = msg.sender_name || 'Utilisateur';
+    const time = msg.created_at ? new Date(msg.created_at).toLocaleTimeString('fr-FR') : '';
+    div.innerHTML = `${msg.content}<div class="meta">${name} — ${time}</div>`;
+    container.appendChild(div); container.scrollTop = container.scrollHeight;
+}
+function sendChatMsg() {
+    const input = document.getElementById('chatInput');
+    const content = input.value.trim();
+    if (!content) return;
+    if (chatWs && chatWs.readyState === WebSocket.OPEN) {
+        chatWs.send(JSON.stringify({ type: 'message', content }));
+        input.value = '';
+    } else {
+        fetch(`${API}/api/chat/conversations/${chatConversationId}/messages/`, {
+            method:'POST', headers:{'Authorization':`Bearer ${chatToken}`,'Content-Type':'application/json'},
+            body:JSON.stringify({content})
+        }).then(r=>r.json()).then(m=>{ appendChatMsg(m, true); input.value = ''; }).catch(e=>showToast('Envoi échoué: '+e.message,'error'));
+    }
+}
+document.addEventListener('DOMContentLoaded', connectChat);
+</script>
+{% endblock %}

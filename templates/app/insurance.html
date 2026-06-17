@@ -1,0 +1,79 @@
+{% extends "app/base.html" %}{% load static %}
+{% block title %}COFINANCE CI - Assurances{% endblock %}
+{% block page_title %}Assurances{% endblock %}
+{% block content %}
+<div class="page-header flex items-center justify-between">
+    <div><h1>Assurances</h1><p>Produits d'assurance et vos souscriptions</p></div>
+</div>
+<div class="mb-4"><div class="card"><div class="card-header">Mes souscriptions actives</div><div class="card-body" id="subscriptionsContainer"><div class="loading">Chargement</div></div></div></div>
+<div class="card"><div class="card-header">Produits disponibles</div><div class="card-body" id="productsContainer"><div class="loading">Chargement</div></div></div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+async function loadSubscriptions() {
+    try {
+        const res = await fetch(`${API}/api/insurance/subscriptions/`, { headers: authHeaders() });
+        const data = await res.json();
+        const subs = data.results || data || [];
+        const container = document.getElementById('subscriptionsContainer');
+        if (!subs.length) {
+            container.innerHTML = '<div class="empty-state" style="padding:1rem"><p>Aucune souscription active</p></div>';
+            return;
+        }
+        container.innerHTML = '<div class="table-wrapper"><table><thead><tr><th>Police</th><th>Produit</th><th>Prime</th><th>Couverture</th><th>Début</th><th>Fin</th><th>Statut</th></tr></thead><tbody>' +
+        subs.filter(s => s.is_active_policy !== false).map(s => `
+            <tr><td><strong>${s.policy_number}</strong></td><td>${s.product_detail?.name||'-'}</td>
+            <td>${formatCurrency(s.premium_paid)}</td><td>${s.product_detail ? formatCurrency(s.product_detail.coverage_amount) : '-'}</td>
+            <td>${formatDate(s.start_date)}</td><td>${formatDate(s.end_date)}</td>
+            <td><span class="badge ${statusBadgeClass(s.status)}">${statusLabel(s.status)}</span></td></tr>
+        `).join('') + '</tbody></table></div>';
+    } catch {}
+}
+
+async function loadProducts() {
+    try {
+        const res = await fetch(`${API}/api/insurance/products/`, { headers: authHeaders() });
+        const products = await res.json();
+        const container = document.getElementById('productsContainer');
+        if (!products.length) {
+            container.innerHTML = '<div class="empty-state"><p>Aucun produit disponible</p></div>';
+            return;
+        }
+        container.innerHTML = '<div class="grid-2">' + products.map(p => `
+            <div class="card" style="border:1px solid var(--border-light);border-radius:var(--radius-md);overflow:hidden">
+                <div style="padding:1.25rem">
+                    <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:0.75rem">
+                        <div><div style="font-weight:700;font-size:1.05rem">${p.name}</div>
+                        <div style="font-size:0.8rem;color:var(--text-muted)">${p.product_type_display}</div></div>
+                        <div style="background:var(--primary-light);color:var(--primary);padding:0.25rem 0.6rem;border-radius:var(--radius-full);font-size:0.7rem;font-weight:600">${p.duration_months} mois</div>
+                    </div>
+                    <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;line-height:1.5">${p.description}</p>
+                    <div class="flex items-center justify-between" style="margin-bottom:1rem">
+                        <div><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase">Prime</div><div style="font-weight:700">${formatCurrency(p.premium_amount)}</div></div>
+                        <div style="text-align:right"><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase">Couverture</div><div style="font-weight:700;color:var(--primary)">${formatCurrency(p.coverage_amount)}</div></div>
+                    </div>
+                    <button class="btn btn-primary w-full" onclick="subscribeInsurance(${p.id})">Souscrire</button>
+                </div>
+            </div>
+        `).join('') + '</div>';
+    } catch {}
+}
+
+async function subscribeInsurance(productId) {
+    if (!confirm('Confirmer la souscription ?')) return;
+    try {
+        const res = await fetch(`${API}/api/insurance/subscriptions/`, {
+            method: 'POST', headers: authHeaders(),
+            body: JSON.stringify({ product_id: productId })
+        });
+        if (!res.ok) { const err = await res.json(); throw new Error(Object.values(err).flat().join(', ')); }
+        showToast('Souscription confirmée !', 'success');
+        loadSubscriptions();
+        loadProducts();
+    } catch(e) { showToast(e.message, 'error'); }
+}
+
+loadSubscriptions();
+loadProducts();
+</script>
+{% endblock %}

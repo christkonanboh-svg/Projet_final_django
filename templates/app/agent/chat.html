@@ -1,0 +1,126 @@
+{% extends "app/base.html" %}
+{% block title %}Agent - Support{% endblock %}
+{% block page_title %}Support client{% endblock %}
+{% block content %}
+<div class="page-header flex items-center justify-between">
+    <div><h1>Support</h1><p>Répondez aux clients en temps réel</p></div>
+</div>
+<div class="grid-2" style="height:calc(100vh - 260px);grid-template-columns:280px 1fr">
+    <div class="card" style="overflow-y:auto;border-radius:var(--radius-md)">
+        <div style="padding:0.75rem 1rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border-light)">Conversations</div>
+        <div id="convList"></div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;border-radius:var(--radius-md)">
+        <div style="padding:0.75rem 1rem;border-bottom:1px solid var(--border-light);font-weight:600;font-size:0.9rem;display:flex;align-items:center;gap:0.5rem">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--success)" id="chatDot"></span>
+            <span id="chatHeaderText">Sélectionnez une conversation</span>
+        </div>
+        <div id="emptyChat" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.9rem">Sélectionnez une conversation</div>
+        <div id="chatPanel" style="display:none;flex:1;flex-direction:column;min-height:0">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div style="padding:0 1rem;font-size:0.8rem;color:var(--text-muted);font-style:italic;min-height:1.2rem" id="typingIndicator"></div>
+            <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Répondre..." onkeydown="if(event.key==='Enter')sendAgentMsg()">
+            <button class="btn btn-primary" onclick="sendAgentMsg()">Envoyer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+let agentWs = null, agentConvId = null, agentToken = null, agentUserId = null, typingTimeout = null;
+
+async function loadConvs() {
+    agentToken = localStorage.getItem('access_token');
+    try {
+        const meRes = await fetch(`${API}/api/auth/me/`, { headers: { 'Authorization': `Bearer ${agentToken}` } });
+        const me = await meRes.json();
+        agentUserId = me.id;
+
+        const res = await fetch(`${API}/api/chat/conversations/`, { headers: { 'Authorization': `Bearer ${agentToken}` } });
+        const data = await res.json();
+        const convs = data.results || data || [];
+        const list = document.getElementById('convList');
+        list.innerHTML = '';
+        convs.forEach(c => {
+            const div = document.createElement('div');
+            const clientName = c.client_detail ? (c.client_detail.first_name || c.client_detail.username) : 'Client';
+            div.style.cssText = `padding:0.75rem 1rem;border-bottom:1px solid var(--border-light);cursor:pointer;transition:var(--transition);${c.id===agentConvId?'background:var(--primary-50)':''}`;
+            div.onclick = () => selectAgentConv(c);
+            div.innerHTML = `<div style="font-weight:600;font-size:0.85rem">${c.subject}</div><div style="font-size:0.75rem;color:var(--text-muted)">${clientName}</div><span class="badge ${statusBadgeClass(c.status)}">${statusLabel(c.status)}</span>`;
+            list.appendChild(div);
+        });
+    } catch {}
+}
+
+async function selectAgentConv(conv) {
+    agentConvId = conv.id;
+    if (agentWs) agentWs.close();
+    document.getElementById('emptyChat').style.display = 'none';
+    document.getElementById('chatPanel').style.display = 'flex';
+    const clientName = conv.client_detail ? (conv.client_detail.first_name || conv.client_detail.username) : 'Client';
+    document.getElementById('chatHeaderText').textContent = `${conv.subject} — ${clientName}`;
+    await loadAgentMessages();
+    connectAgentWs();
+    loadConvs();
+    try {
+        if (conv.status === 'open') await fetch(`${API}/api/chat/conversations/${conv.id}/assign/`, { method:'POST', headers:{ 'Authorization':`Bearer ${agentToken}`,'Content-Type':'application/json' }, body:'{}' });
+    } catch {}
+}
+
+async function loadAgentMessages() {
+    try {
+        const res = await fetch(`${API}/api/chat/conversations/${agentConvId}/messages/`, { headers: { 'Authorization': `Bearer ${agentToken}` } });
+        const data = await res.json();
+        const msgs = data.results || data || [];
+        const container = document.getElementById('chatMessages');
+        container.innerHTML = '';
+        msgs.forEach(m => appendAgentMsg(m, m.sender_id === agentUserId));
+    } catch {}
+}
+
+function connectAgentWs() {
+    if (agentWs) agentWs.close();
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    agentWs = new WebSocket(`${protocol}//${window.location.host}/ws/chat/${agentConvId}/?token=${encodeURIComponent(agentToken)}`);
+    agentWs.onopen = () => { document.getElementById('chatDot').style.background = 'var(--success)'; document.getElementById('chatHeaderText').textContent = document.getElementById('chatHeaderText').textContent.replace(' (déconnecté)',''); };
+    agentWs.onerror = () => {};
+    agentWs.onclose = () => { agentWs = null; document.getElementById('chatDot').style.background = 'var(--danger)'; if (!document.getElementById('chatHeaderText').textContent.includes('(déconnecté)')) document.getElementById('chatHeaderText').textContent += ' (déconnecté)'; };
+    agentWs.onmessage = (e) => {
+        const d = JSON.parse(e.data);
+        if (d.type === 'message') appendAgentMsg(d.message, d.message.sender_id === agentUserId);
+        else if (d.type === 'typing') document.getElementById('typingIndicator').textContent = d.is_typing ? `${d.username} écrit...` : '';
+    };
+}
+
+function appendAgentMsg(msg, isSent) {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = `chat-msg ${isSent ? 'sent' : 'received'}`;
+    const name = msg.sender_name || 'Utilisateur';
+    const time = msg.created_at ? new Date(msg.created_at).toLocaleTimeString('fr-FR') : '';
+    div.innerHTML = `${msg.content}<div class="meta">${name} — ${time}</div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function sendAgentMsg() {
+    const input = document.getElementById('chatInput');
+    const content = input.value.trim();
+    if (!content) return;
+    if (agentWs && agentWs.readyState === WebSocket.OPEN) {
+        agentWs.send(JSON.stringify({ type: 'message', content }));
+        input.value = '';
+    } else {
+        fetch(`${API}/api/chat/conversations/${agentConvId}/messages/`, {
+            method:'POST', headers:{'Authorization':`Bearer ${agentToken}`,'Content-Type':'application/json'},
+            body:JSON.stringify({content})
+        }).then(r=>r.json()).then(m=>{ appendAgentMsg(m, true); input.value = ''; }).catch(e=>showToast('Envoi échoué','error'));
+    }
+}
+
+loadConvs();
+setInterval(loadConvs, 10000);
+</script>
+{% endblock %}

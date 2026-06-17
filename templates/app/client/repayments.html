@@ -1,0 +1,39 @@
+{% extends "app/base.html" %}
+{% block title %}COFINANCE CI - Remboursements{% endblock %}
+{% block page_title %}Remboursements{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Échéancier</h1><p>Suivez vos remboursements</p></div>
+<div class="card"><div class="card-body" id="schedulesContainer"><div class="loading">Chargement</div></div></div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+async function loadSchedules() {
+    try {
+        const res = await fetch(`${API}/api/repayments/schedules/`, { headers: authHeaders() });
+        const data = await res.json();
+        const schedules = data.results || data || [];
+        renderSchedules(schedules);
+    } catch { document.getElementById('schedulesContainer').innerHTML = '<div class="empty-state"><p>Erreur de chargement</p></div>'; }
+}
+function renderSchedules(schedules) {
+    const container = document.getElementById('schedulesContainer');
+    if (!schedules.length) {
+        container.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><h3>Aucune échéance</h3><p>Les échéances apparaîtront après approbation d\'un crédit</p></div>'; return;
+    }
+    let totalDue = 0, totalPaid = 0;
+    schedules.forEach(s => { totalDue += parseFloat(s.amount_due); totalPaid += parseFloat(s.amount_paid); });
+    const rate = totalDue > 0 ? Math.round(totalPaid/totalDue*100) : 0;
+    container.innerHTML = `
+    <div class="grid-3" style="margin-bottom:1.5rem">
+        <div class="stat-card" style="padding:1rem"><div class="stat-value" style="font-size:1.2rem">${formatCurrency(totalDue)}</div><div class="stat-label">Total dû</div></div>
+        <div class="stat-card" style="padding:1rem"><div class="stat-value" style="font-size:1.2rem">${formatCurrency(totalPaid)}</div><div class="stat-label">Total payé</div></div>
+        <div class="stat-card" style="padding:1rem"><div class="stat-value" style="font-size:1.2rem">${rate}%</div><div class="stat-label">Taux remboursement</div></div>
+    </div>
+    <div style="height:10px;background:var(--border-light);border-radius:5px;overflow:hidden;margin-bottom:1.5rem"><div style="height:100%;width:${rate}%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:5px"></div></div>
+    <div class="table-wrapper"><table><thead><tr><th>#</th><th>Échéance</th><th>Montant</th><th>Payé</th><th>Pénalité</th><th>Statut</th><th>Date</th></tr></thead><tbody>
+    ${schedules.map(s => `<tr><td>#${s.id}</td><td>Échéance ${s.installment_number}</td><td><strong>${formatCurrency(s.amount_due)}</strong></td><td>${formatCurrency(s.amount_paid)}</td><td>${parseFloat(s.penalty_amount) > 0 ? formatCurrency(s.penalty_amount) : '-'}</td><td><span class="badge ${statusBadgeClass(s.status)}">${statusLabel(s.status)}</span></td><td>${formatDate(s.due_date)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+loadSchedules();
+</script>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "app/base.html" %}{% load static %}
+{% block title %}COFINANCE CI - Crédits{% endblock %}
+{% block page_title %}Crédits{% endblock %}
+{% block content %}
+<div class="page-header flex items-center justify-between">
+    <div><h1>Crédits</h1><p>Gérez vos demandes de crédit</p></div>
+    <button class="btn btn-primary" onclick="openCreateModal()">+ Nouveau crédit</button>
+</div>
+<div class="card"><div class="card-body" id="creditsContainer"><div class="loading">Chargement</div></div></div>
+
+<div class="modal-overlay" id="createModal">
+    <div class="modal">
+        <div class="modal-header"><span>Nouvelle demande de crédit</span><button class="close-btn" onclick="closeModal('createModal')">✕</button></div>
+        <div class="modal-body">
+            <div class="form-group"><label>Montant (FCFA)</label><input type="number" id="creditAmount" placeholder="Ex: 500000" min="1000"></div>
+            <div class="form-group"><label>Objet</label><textarea id="creditPurpose" placeholder="Raison de la demande" rows="3"></textarea></div>
+            <div class="form-group"><label>Durée (mois)</label><select id="creditDuration"><option value="3">3 mois</option><option value="6" selected>6 mois</option><option value="12">12 mois</option><option value="24">24 mois</option></select></div>
+            <div class="form-group"><label>Fréquence de remboursement</label><select id="creditFrequency"><option value="monthly">Mensuel</option><option value="weekly">Hebdomadaire</option></select></div>
+            <div class="form-group"><label>Région</label><select id="creditRegion"><option value="">Sélectionner</option><option value="abidjan">Abidjan</option><option value="bouake">Bouaké</option><option value="san_pedro">San-Pédro</option><option value="korhogo">Korhogo</option><option value="yamoussoukro">Yamoussoukro</option></select></div>
+            <button class="btn w-full" onclick="submitCredit()">Soumettre la demande</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="detailModal">
+    <div class="modal">
+        <div class="modal-header"><span>Détail du crédit</span><button class="close-btn" onclick="closeModal('detailModal')">✕</button></div>
+        <div class="modal-body" id="detailBody"></div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+let creditsData = [];
+
+async function loadCredits() {
+    try {
+        const res = await fetch(`${API}/api/credits/`, { headers: authHeaders() });
+        const data = await res.json();
+        creditsData = data.results || data || [];
+        renderCredits();
+    } catch(e) { document.getElementById('creditsContainer').innerHTML = '<div class="empty-state"><p>Erreur de chargement</p></div>'; }
+}
+
+function renderCredits() {
+    const container = document.getElementById('creditsContainer');
+    if (!creditsData.length) {
+        container.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M12 9v6"/><path d="M9 12h6"/></svg><h3>Aucun crédit</h3><p>Soumettez votre première demande</p></div>';
+        return;
+    }
+    container.innerHTML = '<div class="table-wrapper"><table><thead><tr><th>#</th><th>Montant</th><th>Objet</th><th>Statut</th><th>Score</th><th>Date</th><th></th></tr></thead><tbody>' + creditsData.map(c => `
+        <tr><td>#${c.id}</td><td><strong>${formatCurrency(c.amount_requested)}</strong></td><td>${c.purpose?.substring(0,40)||'-'}</td>
+        <td><span class="badge ${statusBadgeClass(c.status)}">${statusLabel(c.status)}</span></td>
+        <td>${c.eligibility_score || '-'}</td><td>${formatDate(c.submitted_at)}</td>
+        <td><button class="btn btn-sm btn-ghost" onclick="viewCredit(${c.id})">Détail</button></td></tr>
+    `).join('') + '</tbody></table></div>';
+}
+
+async function viewCredit(id) {
+    try {
+        const res = await fetch(`${API}/api/credits/${id}/`, { headers: authHeaders() });
+        const c = await res.json();
+        document.getElementById('detailBody').innerHTML = `
+            <div class="grid-2" style="gap:1rem">
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em">Montant</div><div style="font-weight:700">${formatCurrency(c.amount_requested)}</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em">Statut</div><div><span class="badge ${statusBadgeClass(c.status)}">${statusLabel(c.status)}</span></div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em">Score éligibilité</div><div style="font-weight:700">${c.eligibility_score || '-'}/100</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em">Taux intérêt</div><div style="font-weight:700">${(parseFloat(c.interest_rate)*100).toFixed(1)}%</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em">Durée</div><div>${c.duration_months} mois</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em">Fréquence</div><div>${c.repayment_frequency === 'weekly' ? 'Hebdomadaire' : 'Mensuel'}</div></div>
+            </div>
+            <div class="mt-4"><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em">Objet</div><p style="margin-top:0.3rem">${c.purpose}</p></div>
+            <div class="mt-4 flex gap-3">
+                ${c.status === 'submitted' ? `<button class="btn btn-sm btn-outline" onclick="closeModal('detailModal');alert('Fonctionnalité d\'annulation à implémenter')">Annuler</button>` : ''}
+                ${(c.status === 'approved' || c.status === 'disbursed') ? `<button class="btn btn-sm btn-primary" onclick="window.location.href='/app/repayments/'">Voir échéancier</button>` : ''}
+            </div>`;
+        openModal('detailModal');
+    } catch(e) { showToast('Erreur chargement détail', 'error'); }
+}
+
+function openCreateModal() { openModal('createModal'); }
+
+async function submitCredit() {
+    const amount = document.getElementById('creditAmount').value;
+    const purpose = document.getElementById('creditPurpose').value;
+    const duration = document.getElementById('creditDuration').value;
+    const frequency = document.getElementById('creditFrequency').value;
+    const region = document.getElementById('creditRegion').value;
+    if (!amount || amount < 1000) { showToast('Montant minimum 1 000 FCFA', 'error'); return; }
+    if (!purpose) { showToast('Veuillez décrire l\'objet', 'error'); return; }
+    try {
+        const res = await fetch(`${API}/api/credits/`, {
+            method: 'POST', headers: authHeaders(),
+            body: JSON.stringify({ amount_requested: parseFloat(amount), purpose, duration_months: parseInt(duration), repayment_frequency: frequency, region })
+        });
+        if (!res.ok) { const err = await res.json(); throw new Error(Object.values(err).flat().join(', ')); }
+        showToast('Demande de crédit soumise avec succès', 'success');
+        closeModal('createModal');
+        document.getElementById('creditAmount').value = '';
+        document.getElementById('creditPurpose').value = '';
+        loadCredits();
+    } catch(e) { showToast(e.message, 'error'); }
+}
+
+loadCredits();
+</script>
+{% endblock %}

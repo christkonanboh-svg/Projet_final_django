@@ -1,0 +1,78 @@
+{% extends "app/base.html" %}
+{% block title %}Profil{% endblock %}
+{% block page_title %}Profil{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Profil</h1></div>
+<div class="grid-2">
+    <div class="card"><div class="card-header">Informations</div><div class="card-body" id="profileInfo"><div class="loading">Chargement</div></div></div>
+    <div>
+        <div class="card mb-4"><div class="card-header">Modifier</div><div class="card-body">
+            <div class="form-group"><label>Email</label><input type="email" id="editEmail"></div>
+            <div class="form-group"><label>Prénom</label><input type="text" id="editFirstName"></div>
+            <div class="form-group"><label>Nom</label><input type="text" id="editLastName"></div>
+            <div class="form-group"><label>Téléphone</label><input type="text" id="editPhone"></div>
+            <div class="form-group"><label>Région</label><select id="editRegion"><option value="">Sélectionner</option><option value="abidjan">Abidjan</option><option value="bouake">Bouaké</option><option value="san_pedro">San-Pédro</option><option value="korhogo">Korhogo</option><option value="yamoussoukro">Yamoussoukro</option></select></div>
+            <button class="btn btn-primary w-full" onclick="updateProfile()">Enregistrer</button>
+        </div></div>
+        <div class="card"><div class="card-header">Mot de passe</div><div class="card-body">
+            <div class="form-group"><label>Ancien mot de passe</label><input type="password" id="oldPassword" placeholder="Votre mot de passe actuel"></div>
+            <div class="form-group"><label>Nouveau mot de passe</label><input type="password" id="newPassword" placeholder="Minimum 6 caractères"></div>
+            <div class="form-group"><label>Confirmer</label><input type="password" id="confirmPassword" placeholder="Confirmer le nouveau mot de passe"></div>
+            <button class="btn btn-primary w-full" onclick="changePassword()">Changer le mot de passe</button>
+            <p id="pwMsg" style="font-size:0.8rem;margin-top:0.5rem;text-align:center"></p>
+        </div></div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+async function loadProfile() {
+    try {
+        const res = await fetch(`${API}/api/auth/me/`, { headers: authHeaders() });
+        if (!res.ok) { logout(); return; }
+        const user = await res.json();
+        document.getElementById('profileInfo').innerHTML = `
+            <div class="grid-2" style="gap:1rem">
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Identifiant</div><div style="font-weight:600">${user.username}</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Rôle</div><div><span class="badge badge-green">${user.role_display||user.role}</span></div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Email</div><div>${user.email||'-'}</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Téléphone</div><div>${user.phone||'-'}</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Région</div><div>${user.region_display||'-'}</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Membre depuis</div><div>${formatDate(user.date_joined)}</div></div>
+            </div>
+            <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border-light)">
+                <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Nom complet</div>
+                <div style="font-weight:600">${[user.first_name,user.last_name].filter(Boolean).join(' ')||'-'}</div></div>`;
+        document.getElementById('editEmail').value = user.email||'';
+        document.getElementById('editFirstName').value = user.first_name||'';
+        document.getElementById('editLastName').value = user.last_name||'';
+        document.getElementById('editPhone').value = user.phone||'';
+        if (user.region) document.getElementById('editRegion').value = user.region;
+    } catch { logout(); }
+}
+async function updateProfile() {
+    try {
+        const res = await fetch(`${API}/api/auth/me/`, { method:'PATCH', headers:authHeaders(), body:JSON.stringify({ email:document.getElementById('editEmail').value, first_name:document.getElementById('editFirstName').value, last_name:document.getElementById('editLastName').value, phone:document.getElementById('editPhone').value, region:document.getElementById('editRegion').value }) });
+        if (!res.ok) { const err = await res.json(); throw new Error(Object.values(err).flat().join(', ')); }
+        showToast('Profil mis à jour','success'); loadProfile(); loadUserProfile();
+    } catch(e) { showToast(e.message,'error'); }
+}
+async function changePassword() {
+    const oldPw = document.getElementById('oldPassword').value;
+    const newPw = document.getElementById('newPassword').value;
+    const confirmPw = document.getElementById('confirmPassword').value;
+    const msgEl = document.getElementById('pwMsg');
+    if (!oldPw || !newPw || !confirmPw) { msgEl.style.color='var(--danger)'; msgEl.textContent='Tous les champs sont requis'; return; }
+    if (newPw !== confirmPw) { msgEl.style.color='var(--danger)'; msgEl.textContent='Les mots de passe ne correspondent pas'; return; }
+    if (newPw.length < 6) { msgEl.style.color='var(--danger)'; msgEl.textContent='Minimum 6 caractères'; return; }
+    try {
+        const res = await fetch(`${API}/api/auth/change-password/`, { method:'POST', headers:authHeaders(), body:JSON.stringify({ old_password: oldPw, new_password: newPw }) });
+        const data = await res.json();
+        if (!res.ok) { msgEl.style.color='var(--danger)'; msgEl.textContent=data.detail||'Erreur'; return; }
+        msgEl.style.color='var(--success)'; msgEl.textContent='Mot de passe changé ✅';
+        document.getElementById('oldPassword').value=''; document.getElementById('newPassword').value=''; document.getElementById('confirmPassword').value='';
+    } catch(e) { msgEl.style.color='var(--danger)'; msgEl.textContent='Erreur réseau'; }
+}
+loadProfile();
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "app/base.html" %}
+{% block title %}Admin - Crédits{% endblock %}
+{% block page_title %}Crédits{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Tous les crédits</h1><p>Supervision complète</p></div>
+<div class="card"><div class="card-body" id="creditsContainer"><div class="loading">Chargement</div></div></div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+async function loadCredits() {
+    try {
+        const res = await fetch(`${API}/api/credits/`, { headers: authHeaders() });
+        const data = await res.json();
+        const credits = data.results || data || [];
+        const container = document.getElementById('creditsContainer');
+        if (!credits.length) { container.innerHTML = '<div class="empty-state"><p>Aucun crédit</p></div>'; return; }
+        container.innerHTML = '<div class="table-wrapper"><table><thead><tr><th>#</th><th>Client</th><th>Montant</th><th>Statut</th><th>Score</th><th>Agent</th><th>Date</th></tr></thead><tbody>' +
+            credits.map(c => `<tr><td>#${c.id}</td><td>${c.client_name||'#'+c.client}</td><td><strong>${formatCurrency(c.amount_requested)}</strong></td><td><span class="badge ${statusBadgeClass(c.status)}">${statusLabel(c.status)}</span></td><td>${c.eligibility_score||'-'}</td><td>${c.assigned_agent_name||'-'}</td><td>${formatDate(c.submitted_at)}</td></tr>`).join('') +
+            '</tbody></table></div>';
+    } catch {}
+}
+loadCredits();
+</script>
+{% endblock %}

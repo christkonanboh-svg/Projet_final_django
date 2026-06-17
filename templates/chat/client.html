@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>COFINANCE CI - Chat Client</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary: #0d7a3f;
+            --primary-dark: #065a2c;
+            --primary-light: #e8f5e9;
+            --primary-50: #f0fdf4;
+            --accent: #00b894;
+            --bg: #f8fbf8;
+            --surface: #ffffff;
+            --text: #1a1a2e;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --border: #e5e7eb;
+            --border-light: #f0f0f0;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 24px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 40px rgba(0,0,0,0.1);
+            --shadow-xl: 0 16px 48px rgba(13,122,63,0.12);
+            --radius-sm: 8px;
+            --radius-md: 16px;
+            --radius-lg: 20px;
+            --radius-xl: 24px;
+            --radius-full: 9999px;
+            --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes messageIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border-light);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            animation: fadeIn 0.4s ease;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        header h1 {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        header h1 .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+        }
+
+        .status {
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.35rem 0.9rem;
+            border-radius: var(--radius-full);
+            background: var(--primary-50);
+            color: var(--primary);
+            border: 1px solid rgba(13,122,63,0.12);
+            transition: var(--transition);
+        }
+
+        .status.connected {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-color: rgba(46,125,50,0.15);
+        }
+
+        .login-panel, .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .login-panel {
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.5rem;
+            animation: fadeIn 0.6s ease;
+        }
+
+        .login-form {
+            background: var(--surface);
+            padding: 2.5rem 2rem;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid var(--border-light);
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+            transition: var(--transition);
+        }
+
+        .login-form:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .login-form .form-logo {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+            box-shadow: 0 6px 20px rgba(13,122,63,0.18);
+        }
+
+        .login-form .form-logo svg {
+            width: 26px;
+            height: 26px;
+            fill: white;
+        }
+
+        .login-form h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 0.35rem;
+            letter-spacing: -0.02em;
+            color: var(--text);
+        }
+
+        .login-form .form-subtitle {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.75rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: var(--transition);
+            background: var(--bg);
+            color: var(--text);
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(13,122,63,0.1);
+            background: var(--surface);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            border: none;
+            padding: 0.85rem 1.5rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            font-family: inherit;
+            width: 100%;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover {
+            box-shadow: 0 4px 20px rgba(13,122,63,0.3);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        button::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+            pointer-events: none;
+        }
+
+        .error {
+            color: #dc2626;
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .new-conv {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .new-conv input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-family: inherit;
+            margin-bottom: 0.75rem;
+            transition: var(--transition);
+            background: var(--bg);
+            color: var(--text);
+            outline: none;
+        }
+
+        .new-conv input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(13,122,63,0.1);
+            background: var(--surface);
+        }
+
+        .chat-panel {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            scroll-behavior: smooth;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: var(--radius-full);
+        }
+
+        .message {
+            max-width: 78%;
+            padding: 0.85rem 1.1rem;
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            animation: messageIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .message.sent {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.received {
+            align-self: flex-start;
+            background: var(--surface);
+            border: 1px solid var(--border-light);
+            color: var(--text);
+            border-bottom-left-radius: 4px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .message .meta {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-top: 0.35rem;
+            font-weight: 500;
+        }
+
+        .message.received .meta {
+            color: var(--text-muted);
+        }
+
+        .message.sent .meta {
+            color: rgba(255,255,255,0.75);
+        }
+
+        .typing {
+            padding: 0.35rem 1.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-style: italic;
+            min-height: 1.6rem;
+            font-weight: 400;
+            animation: pulse 1.5s ease infinite;
+        }
+
+        .input-area {
+            padding: 0.9rem 1.25rem;
+            background: var(--surface);
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            gap: 0.6rem;
+            align-items: center;
+            flex-shrink: 0;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-full);
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: var(--transition);
+            background: var(--bg);
+            color: var(--text);
+            outline: none;
+        }
+
+        .input-area input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(13,122,63,0.08);
+            background: var(--surface);
+        }
+
+        .input-area input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-area button {
+            width: auto;
+            padding: 0.8rem 1.4rem;
+            border-radius: var(--radius-full);
+            white-space: nowrap;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 600px) {
+            header { padding: 0.75rem 1rem; }
+            header h1 { font-size: 0.9rem; }
+            .messages { padding: 1rem; }
+            .input-area { padding: 0.75rem 1rem; }
+            .message { max-width: 88%; font-size: 0.85rem; }
+            .login-form { padding: 2rem 1.5rem; }
+            .login-panel { padding: 1.5rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><span class="dot"></span> COFINANCE CI — Support Client</h1>
+        <span class="status" id="connectionStatus">Déconnecté</span>
+    </header>
+
+    <div class="login-panel" id="loginPanel">
+        <div class="login-form">
+            <div class="form-logo">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+            </div>
+            <h2>Bienvenue</h2>
+            <p class="form-subtitle">Connectez-vous pour accéder au support</p>
+            <div class="form-group">
+                <label>Identifiant</label>
+                <input type="text" id="username" value="client1" placeholder="client1">
+            </div>
+            <div class="form-group">
+                <label>Mot de passe</label>
+                <input type="password" id="password" value="client123" placeholder="Mot de passe">
+            </div>
+            <button onclick="login()">Se connecter</button>
+            <p class="error" id="loginError"></p>
+            <div class="new-conv" id="newConvSection" style="display:none;">
+                <input type="text" id="subject" placeholder="Sujet de la conversation" value="Question sur mon crédit">
+                <button onclick="startConversation()">Ouvrir une conversation</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-panel" id="chatPanel">
+        <div class="messages" id="messages"></div>
+        <div class="typing" id="typingIndicator"></div>
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="Votre message..." onkeydown="handleKey(event)" oninput="sendTyping(true)">
+            <button onclick="sendMessage()">Envoyer</button>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin;
+        let token = null;
+        let conversationId = null;
+        let ws = null;
+        let typingTimeout = null;
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            document.getElementById('loginError').textContent = '';
+            try {
+                const res = await fetch(`${API}/api/auth/login/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                if (!res.ok) throw new Error('Identifiants incorrects');
+                const data = await res.json();
+                token = data.access;
+                document.getElementById('newConvSection').style.display = 'block';
+                await loadOrCreateConversation();
+            } catch (e) {
+                document.getElementById('loginError').textContent = e.message;
+            }
+        }
+
+        async function loadOrCreateConversation() {
+            const res = await fetch(`${API}/api/chat/conversations/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const conversations = await res.json();
+            const results = conversations.results || conversations;
+            const open = results.find(c => c.status !== 'closed');
+            if (open) {
+                conversationId = open.id;
+                showChat();
+                await loadMessages();
+                connectWebSocket();
+            }
+        }
+
+        async function startConversation() {
+            const subject = document.getElementById('subject').value || 'Support client';
+            const res = await fetch(`${API}/api/chat/conversations/`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ subject })
+            });
+            if (!res.ok) { document.getElementById('loginError').textContent = 'Erreur création conversation'; return; }
+            const conv = await res.json();
+            conversationId = conv.id;
+            showChat();
+            connectWebSocket();
+        }
+
+        function showChat() {
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('chatPanel').style.display = 'flex';
+        }
+
+        async function loadMessages() {
+            const res = await fetch(`${API}/api/chat/conversations/${conversationId}/messages/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            const messages = data.results || data;
+            const container = document.getElementById('messages');
+            container.innerHTML = '';
+            messages.forEach(m => appendMessage(m, m.sender_role === 'client'));
+        }
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws/chat/${conversationId}/?token=${token}`);
+            ws.onopen = () => {
+                const el = document.getElementById('connectionStatus');
+                el.textContent = 'Connecté';
+                el.classList.add('connected');
+            };
+            ws.onclose = () => {
+                const el = document.getElementById('connectionStatus');
+                el.textContent = 'Déconnecté';
+                el.classList.remove('connected');
+            };
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.type === 'message') {
+                    const isSent = data.message.sender_role === 'client';
+                    appendMessage(data.message, isSent);
+                } else if (data.type === 'typing') {
+                    document.getElementById('typingIndicator').textContent =
+                        data.is_typing ? `${data.username} est en train d'écrire...` : '';
+                } else if (data.type === 'presence') {
+                    const el = document.getElementById('connectionStatus');
+                    el.textContent = data.is_online ? `Agent en ligne` : 'Agent hors ligne';
+                    if (data.is_online) el.classList.add('connected');
+                    else el.classList.remove('connected');
+                }
+            };
+        }
+
+        function appendMessage(msg, isSent) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${isSent ? 'sent' : 'received'}`;
+            const name = msg.sender_name || 'Utilisateur';
+            const time = msg.created_at ? new Date(msg.created_at).toLocaleTimeString('fr-FR') : '';
+            div.innerHTML = `${msg.content}<div class="meta">${name} — ${time}</div>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            if (!content || !ws) return;
+            ws.send(JSON.stringify({ type: 'message', content }));
+            input.value = '';
+            sendTyping(false);
+        }
+
+        function sendTyping(isTyping) {
+            if (!ws) return;
+            clearTimeout(typingTimeout);
+            ws.send(JSON.stringify({ type: 'typing', is_typing: isTyping }));
+            if (isTyping) typingTimeout = setTimeout(() => sendTyping(false), 2000);
+        }
+
+        function handleKey(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+    </script>
+</body>
+</html>

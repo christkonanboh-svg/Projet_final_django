@@ -1,0 +1,45 @@
+{% extends "app/base.html" %}
+{% block title %}Admin - Tableau de bord{% endblock %}
+{% block page_title %}Administration{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Tableau de bord administrateur</h1><p>Supervision complète du système</p></div>
+<div class="grid-4" id="statsGrid">
+    <div class="stat-card"><div class="stat-icon green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M12 9v6"/><path d="M9 12h6"/></svg></div><div class="stat-value" id="aTotalCredits">-</div><div class="stat-label">Total crédits</div></div>
+    <div class="stat-card"><div class="stat-icon amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="stat-value" id="aPendingCredits">-</div><div class="stat-label">En attente</div></div>
+    <div class="stat-card"><div class="stat-icon blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div><div class="stat-value" id="aRecoveryRate">-</div><div class="stat-label">Recouvrement</div></div>
+    <div class="stat-card"><div class="stat-icon rose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="stat-value" id="aActiveIns">-</div><div class="stat-label">Assurances actives</div></div>
+</div>
+<div class="grid-2 mt-4">
+    <div class="card"><div class="card-header">Crédits par statut</div><div class="card-body"><div id="creditsChart"><div class="loading">Chargement</div></div></div></div>
+    <div class="card"><div class="card-header">Conversations ouvertes</div><div class="card-body"><div id="chatStats"><div class="loading">Chargement</div></div></div></div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+(async function() {
+    try {
+        const res = await fetch(`${API}/api/dashboard/stats/`, { headers: authHeaders() });
+        if (!res.ok) return;
+        const d = await res.json();
+        document.getElementById('aTotalCredits').textContent = d.total_credits||0;
+        document.getElementById('aPendingCredits').textContent = d.pending_credits||0;
+        document.getElementById('aRecoveryRate').textContent = (d.recovery_rate_percent||0)+'%';
+        document.getElementById('aActiveIns').textContent = d.active_insurance_subscriptions||0;
+
+        const statuses = d.credits_by_status||{};
+        const labels = {'submitted':'Soumise','in_review':'En analyse','approved':'Approuvée','disbursed':'Décaissée','rejected':'Rejetée'};
+        const colors = {'submitted':'#3b82f6','in_review':'#f59e0b','approved':'#10b981','disbursed':'#0d7a3f','rejected':'#ef4444'};
+        const entries = Object.entries(statuses);
+        const chartDiv = document.getElementById('creditsChart');
+        if (!entries.length) { chartDiv.innerHTML = '<p style="color:var(--text-muted)">Aucune donnée</p>'; }
+        else {
+            const total = entries.reduce((s, [,v]) => s+v, 0);
+            chartDiv.innerHTML = '<div style="display:flex;flex-direction:column;gap:0.6rem">' +
+                entries.map(([k,v]) => `<div><div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.25rem"><span>${labels[k]||k}</span><strong>${v}</strong></div><div style="height:8px;background:var(--border-light);border-radius:4px;overflow:hidden"><div style="height:100%;width:${(v/total*100)}%;background:${colors[k]||'var(--primary)'};border-radius:4px"></div></div></div>`).join('') + '</div>';
+        }
+
+        document.getElementById('chatStats').innerHTML = `<div style="text-align:center;padding:1rem"><div style="font-size:2rem;font-weight:800;color:var(--primary)">${d.open_support_conversations||0}</div><div style="font-size:0.85rem;color:var(--text-muted)">conversations actives</div><a href="/app/admin/chat/" class="btn btn-sm btn-primary mt-4">Superviser</a></div>`;
+    } catch {}
+})();
+</script>
+{% endblock %}

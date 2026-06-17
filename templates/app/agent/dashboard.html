@@ -1,0 +1,87 @@
+{% extends "app/base.html" %}
+{% block title %}Agent - Tableau de bord{% endblock %}
+{% block page_title %}Tableau de bord Agent{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Bonjour, <span id="agentName">Agent</span></h1><p>Vue d'ensemble de votre activité</p></div>
+<div class="grid-4">
+    <div class="stat-card"><div class="stat-icon amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M12 9v6"/><path d="M9 12h6"/></svg></div><div class="stat-value" id="aPending">-</div><div class="stat-label">En attente</div></div>
+    <div class="stat-card"><div class="stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="stat-value" id="aApproved">-</div><div class="stat-label">Approuvés</div></div>
+    <div class="stat-card"><div class="stat-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div><div class="stat-value" id="aTotalCredits">-</div><div class="stat-label">Total crédits</div></div>
+    <div class="stat-card"><div class="stat-icon rose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="stat-value" id="aChats">-</div><div class="stat-label">Conversations</div></div>
+</div>
+<div class="grid-2 mt-4">
+    <div class="card"><div class="card-header">Demandes en attente</div><div class="card-body" id="pendingCredits"><div class="loading">Chargement</div></div></div>
+    <div class="card"><div class="card-header">Portefeuille crédits</div><div class="card-body"><div id="agentCreditChart"><div class="loading">Chargement</div></div></div></div>
+</div>
+<div class="grid-2 mt-4">
+    <div class="card"><div class="card-header">Actions rapides</div><div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:0.75rem">
+            <a href="/app/agent/credits/" class="btn btn-primary w-full">Gérer les crédits</a>
+            <a href="/app/agent/chat/" class="btn btn-outline w-full">Support client</a>
+        </div>
+    </div></div>
+    <div class="card"><div class="card-header">Activité récente</div><div class="card-body" id="agentRecentActivity"><div class="loading">Chargement</div></div></div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+async function loadAgentDashboard() {
+    try {
+        const me = await loadUserProfile();
+        if (me) document.getElementById('agentName').textContent = me.first_name || me.username;
+
+        const credRes = await fetch(`${API}/api/credits/`, { headers: authHeaders() });
+        const data = await credRes.json();
+        const credits = data.results || data || [];
+
+        const pending = credits.filter(c => c.status === 'submitted' || c.status === 'in_review');
+        const approved = credits.filter(c => c.status === 'approved' || c.status === 'disbursed');
+        document.getElementById('aPending').textContent = pending.length;
+        document.getElementById('aApproved').textContent = approved.length;
+
+        document.getElementById('aTotalCredits').textContent = credits.length;
+
+        const chatRes = await fetch(`${API}/api/chat/conversations/`, { headers: authHeaders() });
+        const chatData = await chatRes.json();
+        const convs = chatData.results || chatData || [];
+        document.getElementById('aChats').textContent = convs.filter(c => c.status !== 'closed').length;
+
+        const pendingDiv = document.getElementById('pendingCredits');
+        if (pending.length === 0) {
+            pendingDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center">Aucune demande en attente ✅</p>';
+        } else {
+            pendingDiv.innerHTML = '<div style="display:flex;flex-direction:column;gap:0.5rem">' +
+                pending.slice(0,5).map(c => `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--border-light)"><div><div style="font-weight:600;font-size:0.85rem">#${c.id} - ${formatCurrency(c.amount_requested)}</div><div style="font-size:0.75rem;color:var(--text-muted)">${c.purpose?.substring(0,30)}</div></div><a href="/app/agent/credits/" class="btn btn-xs btn-primary">Traiter</a></div>`).join('') +
+                '</div>';
+        }
+
+        const statusCounts = {};
+        credits.forEach(c => { statusCounts[c.status] = (statusCounts[c.status]||0) + 1; });
+        const chartDiv = document.getElementById('agentCreditChart');
+        const labels = { 'submitted':'Soumise','in_review':'En analyse','approved':'Approuvée','disbursed':'Décaissée','rejected':'Rejetée' };
+        const colors = { 'submitted':'#3b82f6','in_review':'#f59e0b','approved':'#10b981','disbursed':'#0d7a3f','rejected':'#ef4444' };
+        const total = credits.length;
+        if (total === 0) {
+            chartDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center">Aucun crédit</p>';
+        } else {
+            chartDiv.innerHTML = '<div style="display:flex;flex-direction:column;gap:0.6rem">' +
+                Object.entries(statusCounts).map(([k,v]) => `<div><div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.25rem"><span>${labels[k]||k}</span><strong>${v}</strong></div><div style="height:8px;background:var(--border-light);border-radius:4px;overflow:hidden"><div style="height:100%;width:${(v/total*100)}%;background:${colors[k]||'var(--primary)'};border-radius:4px"></div></div></div>`).join('') + '</div>';
+        }
+
+        const activityDiv = document.getElementById('agentRecentActivity');
+        try {
+            const notifRes = await fetch(`${API}/api/notifications/`, { headers: authHeaders() });
+            const notifData = await notifRes.json();
+            const notifs = (notifData.results || notifData || []).slice(0, 5);
+            if (notifs.length === 0) {
+                activityDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center">Aucune activité récente</p>';
+            } else {
+                activityDiv.innerHTML = '<div style="display:flex;flex-direction:column">' +
+                    notifs.map(n => `<div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid var(--border-light)"><div style="width:8px;height:8px;border-radius:50%;background:var(--primary)"></div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:0.8rem">${n.title}</div><div style="font-size:0.7rem;color:var(--text-muted)">${n.message?.substring(0,40)}</div></div><span style="font-size:0.65rem;color:var(--text-muted)">${formatDateTime(n.created_at)}</span></div>`).join('') + '</div>';
+            }
+        } catch { activityDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center">Aucune activité</p>'; }
+    } catch {}
+}
+loadAgentDashboard();
+</script>
+{% endblock %}
