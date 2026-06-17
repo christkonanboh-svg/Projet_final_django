@@ -17,8 +17,8 @@ Plateforme digitale de gestion de microcrédits, d'assurance mobile et de suppor
 ### 1. Cloner le dépôt
 
 ```bash
-git clone https://github.com/VOTRE_USERNAME/cofinance-platform.git
-cd cofinance-platform
+git clone https://github.com/christkonanboh-svg/Projet_final_django.git
+cd Projet_final_django
 ```
 
 ### 2. Créer l'environnement virtuel
@@ -49,25 +49,23 @@ python manage.py seed_db
 ### 5. Lancer le serveur
 
 ```bash
-python manage.py runserver
+daphne -b 0.0.0.0 -p 8003 config.asgi:application
 ```
 
-Pour le chat WebSocket en temps réel, utilisez Daphne :
-
-```bash
-daphne -b 0.0.0.0 -p 8000 config.asgi:application
-```
+Le projet est accessible à l'adresse **http://127.0.0.1:8003/** (redirige automatiquement vers la page de connexion).
 
 ## URLs principales
 
 | URL | Description |
 |-----|-------------|
-| http://127.0.0.1:8000/api/docs/ | Documentation Swagger |
-| http://127.0.0.1:8000/api/redoc/ | Documentation Redoc |
-| http://127.0.0.1:8000/chat/ | Page d'accueil chat |
-| http://127.0.0.1:8000/chat/client/ | Interface client |
-| http://127.0.0.1:8000/chat/agent/ | Interface agent |
-| http://127.0.0.1:8000/admin/ | Administration Django |
+| **http://127.0.0.1:8003/** | Page d'accueil → redirection connexion |
+| http://127.0.0.1:8003/app/login/ | Connexion |
+| http://127.0.0.1:8003/app/client/dashboard/ | Interface client |
+| http://127.0.0.1:8003/app/agent/dashboard/ | Interface agent |
+| http://127.0.0.1:8003/app/admin/dashboard/ | Interface admin |
+| http://127.0.0.1:8003/api/docs/ | Documentation Swagger |
+| http://127.0.0.1:8003/api/redoc/ | Documentation Redoc |
+| http://127.0.0.1:8003/admin/ | Administration Django |
 
 ## Comptes de démonstration
 
@@ -85,6 +83,7 @@ daphne -b 0.0.0.0 -p 8000 config.asgi:application
 - `POST /api/auth/login/` — Connexion JWT
 - `POST /api/auth/refresh/` — Rafraîchir le token
 - `GET/PATCH /api/auth/me/` — Profil utilisateur
+- `POST /api/auth/change-password/` — Changer mot de passe
 - `GET /api/auth/users/` — Liste utilisateurs (admin)
 - `POST /api/auth/users/create/` — Créer un utilisateur (admin)
 
@@ -125,12 +124,13 @@ daphne -b 0.0.0.0 -p 8000 config.asgi:application
 - `GET/POST /api/chat/conversations/{id}/messages/` — Messages REST
 - `WS /ws/chat/{id}/?token=JWT` — WebSocket temps réel
 
-## Démo du chat (2 onglets)
+## Interfaces
 
-1. Lancer le serveur avec Daphne
-2. Ouvrir **http://127.0.0.1:8000/chat/client/** — se connecter avec `client1` / `client123`
-3. Ouvrir **http://127.0.0.1:8000/chat/agent/** dans un second onglet — se connecter avec `agent1` / `agent123`
-4. Échanger des messages en temps réel
+Le projet propose **3 interfaces distinctes** accessibles après connexion :
+
+- **Client** : dashboard, crédits (création, suivi), assurances (catalogue, souscription), remboursements (échéancier), chat support, notifications, profil
+- **Agent** : dashboard (statistiques, activités), crédits (gestion, approbation/rejet), chat support (conversations), notifications, profil
+- **Admin** : dashboard (KPIs globaux), crédits (supervision), utilisateurs (gestion), chat (supervision), assurances (toutes souscriptions), notifications, profil
 
 ## Configuration PostgreSQL
 
@@ -163,7 +163,14 @@ cofinance-platform/
 ├── notifications/    # Alertes in-app
 ├── dashboard/        # Tableau de bord admin
 ├── chat/             # Support client WebSocket
-├── templates/chat/   # Interfaces HTML chat
+├── templates/
+│   ├── app/          # Interfaces graphiques (client, agent, admin)
+│   │   ├── base.html # Layout principal avec sidebar
+│   │   ├── login.html
+│   │   ├── client/   # 7 pages
+│   │   ├── agent/    # 6 pages
+│   │   └── admin/    # 7 pages
+│   └── chat/         # Pages chat historiques
 └── requirements.txt
 ```
 
