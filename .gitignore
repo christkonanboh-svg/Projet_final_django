@@ -12,3 +12,4 @@ media/
 daphne_*.txt
 schema.json
 staticfiles/
+test_api.py

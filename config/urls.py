@@ -17,7 +17,7 @@ from frontend_views import (
 )
 
 urlpatterns = [
-    path("", RedirectView.as_view(url="/app/login/", permanent=True)),
+    path("", RedirectView.as_view(url="/app/login/", permanent=False)),
     path("admin/", admin.site.urls),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
