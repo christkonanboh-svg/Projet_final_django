@@ -8,12 +8,14 @@
 {% endblock %}
 {% block extra_scripts %}
 <script>
+let hasActiveSubscription = false;
 async function loadSubscriptions() {
     try {
         const res = await fetch(`${API}/api/insurance/subscriptions/`, { headers: authHeaders() });
         const data = await res.json(); const subs = data.results || data || [];
         const container = document.getElementById('subscriptionsContainer');
-        if (!subs.length) { container.innerHTML = '<div class="empty-state" style="padding:1rem"><p>Vous n\'avez pas encore souscrit</p></div>'; return; }
+        if (!subs.length) { container.innerHTML = '<div class="empty-state" style="padding:1rem"><p>Vous n\'avez pas encore souscrit</p></div>'; hasActiveSubscription = false; return; }
+        hasActiveSubscription = subs.some(s => s.status === 'active' && new Date(s.end_date) >= new Date());
         container.innerHTML = '<div class="table-wrapper"><table><thead><tr><th>Police</th><th>Produit</th><th>Prime</th><th>Couverture</th><th>Début</th><th>Fin</th><th>Statut</th></tr></thead><tbody>' +
             subs.map(s => `<tr><td><strong>${s.policy_number}</strong></td><td>${s.product_detail?.name||'-'}</td><td>${formatCurrency(s.premium_paid)}</td><td>${s.product_detail ? formatCurrency(s.product_detail.coverage_amount) : '-'}</td><td>${formatDate(s.start_date)}</td><td>${formatDate(s.end_date)}</td><td><span class="badge ${statusBadgeClass(s.status)}">${statusLabel(s.status)}</span></td></tr>`).join('') +
             '</tbody></table></div>';
@@ -22,7 +24,7 @@ async function loadSubscriptions() {
 async function loadProducts() {
     try {
         const res = await fetch(`${API}/api/insurance/products/`, { headers: authHeaders() });
-        const products = await res.json();
+        const data = await res.json(); const products = data.results || data || [];
         const container = document.getElementById('productsContainer');
         if (!products.length) { container.innerHTML = '<div class="empty-state"><p>Aucun produit disponible</p></div>'; return; }
         container.innerHTML = '<div class="grid-2">' + products.map(p => `
@@ -37,7 +39,9 @@ async function loadProducts() {
                         <div><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase">Prime</div><div style="font-weight:700">${formatCurrency(p.premium_amount)}</div></div>
                         <div style="text-align:right"><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase">Couverture</div><div style="font-weight:700;color:var(--primary)">${formatCurrency(p.coverage_amount)}</div></div>
                     </div>
-                    <button class="btn btn-primary w-full" onclick="subscribeInsurance(${p.id})">Souscrire</button>
+                    ${hasActiveSubscription
+                        ? '<div style="padding:0.5rem;text-align:center;background:var(--bg);border-radius:var(--radius-sm);font-size:0.85rem;color:var(--text-secondary)">Vous avez déjà une assurance active</div>'
+                        : '<button class="btn btn-primary w-full" onclick="subscribeInsurance(' + p.id + ')">Souscrire</button>'}
                 </div>
             </div>`).join('') + '</div>';
     } catch {}

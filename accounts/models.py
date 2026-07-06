@@ -19,6 +19,7 @@ class User(AbstractUser):
     phone = models.CharField(max_length=20, blank=True)
     region = models.CharField(max_length=30, choices=Region.choices, blank=True)
     is_online = models.BooleanField(default=False)
+    cni_number = models.CharField(max_length=20, blank=True, default="", verbose_name="Numéro CNI")
 
     class Meta:
         ordering = ["username"]

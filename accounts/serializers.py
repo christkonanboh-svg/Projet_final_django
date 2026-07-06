@@ -17,6 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "phone",
+            "cni_number",
             "role",
             "role_display",
             "region",
@@ -30,7 +31,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["email", "first_name", "last_name", "phone", "region"]
+        fields = ["email", "first_name", "last_name", "phone", "region", "cni_number"]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -48,6 +49,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             "last_name",
             "phone",
             "region",
+            "cni_number",
         ]
 
     def validate(self, attrs):
@@ -56,11 +58,22 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        from notifications.services import create_notification
         validated_data.pop("password_confirm")
         password = validated_data.pop("password")
         user = User(**validated_data, role=User.Role.CLIENT)
         user.set_password(password)
         user.save()
+        # Notifier les admins de la nouvelle inscription
+        admins = User.objects.filter(role=User.Role.ADMIN)
+        for admin in admins:
+            create_notification(
+                admin,
+                "Nouveau client inscrit",
+                f"{user.get_full_name() or user.username} vient de créer un compte client (CNI: {user.cni_number or 'N/A'}).",
+                "new_registration",
+                {"user_id": user.id},
+            )
         return user
 
 
@@ -80,6 +93,7 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "phone",
+            "cni_number",
             "role",
             "region",
         ]

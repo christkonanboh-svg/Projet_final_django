@@ -11,6 +11,7 @@
             <div class="form-group"><label>Prénom</label><input type="text" id="editFirstName"></div>
             <div class="form-group"><label>Nom</label><input type="text" id="editLastName"></div>
             <div class="form-group"><label>Téléphone</label><input type="text" id="editPhone"></div>
+            <div class="form-group"><label>Numéro CNI</label><input type="text" id="editCni"></div>
             <div class="form-group"><label>Région</label><select id="editRegion"><option value="">Sélectionner</option><option value="abidjan">Abidjan</option><option value="bouake">Bouaké</option><option value="san_pedro">San-Pédro</option><option value="korhogo">Korhogo</option><option value="yamoussoukro">Yamoussoukro</option></select></div>
             <button class="btn btn-primary w-full" onclick="updateProfile()">Enregistrer</button>
         </div></div>
@@ -37,6 +38,7 @@ async function loadProfile() {
                 <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Rôle</div><div><span class="badge badge-green">${user.role_display||user.role}</span></div></div>
                 <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Email</div><div>${user.email||'-'}</div></div>
                 <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Téléphone</div><div>${user.phone||'-'}</div></div>
+                <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Numéro CNI</div><div>${user.cni_number||'-'}</div></div>
                 <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Région</div><div>${user.region_display||'-'}</div></div>
                 <div><div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase">Membre depuis</div><div>${formatDate(user.date_joined)}</div></div>
             </div>
@@ -47,12 +49,13 @@ async function loadProfile() {
         document.getElementById('editFirstName').value = user.first_name||'';
         document.getElementById('editLastName').value = user.last_name||'';
         document.getElementById('editPhone').value = user.phone||'';
+        document.getElementById('editCni').value = user.cni_number||'';
         if (user.region) document.getElementById('editRegion').value = user.region;
     } catch { logout(); }
 }
 async function updateProfile() {
     try {
-        const res = await fetch(`${API}/api/auth/me/`, { method:'PATCH', headers:authHeaders(), body:JSON.stringify({ email:document.getElementById('editEmail').value, first_name:document.getElementById('editFirstName').value, last_name:document.getElementById('editLastName').value, phone:document.getElementById('editPhone').value, region:document.getElementById('editRegion').value }) });
+        const res = await fetch(`${API}/api/auth/me/`, { method:'PATCH', headers:authHeaders(), body:JSON.stringify({ email:document.getElementById('editEmail').value, first_name:document.getElementById('editFirstName').value, last_name:document.getElementById('editLastName').value, phone:document.getElementById('editPhone').value, cni_number:document.getElementById('editCni').value, region:document.getElementById('editRegion').value }) });
         if (!res.ok) { const err = await res.json(); throw new Error(Object.values(err).flat().join(', ')); }
         showToast('Profil mis à jour','success'); loadProfile(); loadUserProfile();
     } catch(e) { showToast(e.message,'error'); }

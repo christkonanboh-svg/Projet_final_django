@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework import generics, status
@@ -49,6 +50,16 @@ class InsuranceSubscriptionListCreateView(generics.ListCreateAPIView):
             return Response(
                 {"detail": "Seuls les clients peuvent souscrire."},
                 status=status.HTTP_403_FORBIDDEN,
+            )
+        # Vérifier si le client a déjà une souscription active
+        if InsuranceSubscription.objects.filter(
+            client=request.user,
+            status=InsuranceSubscription.Status.ACTIVE,
+            end_date__gte=timezone.now().date(),
+        ).exists():
+            return Response(
+                {"detail": "Vous avez déjà une police d'assurance active. Un client ne peut souscrire qu'à une seule assurance à la fois."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         serializer = InsuranceSubscribeSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)

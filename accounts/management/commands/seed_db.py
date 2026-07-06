@@ -52,7 +52,7 @@ class Command(BaseCommand):
         agent.set_password("agent123")
         agent.save()
 
-        client, _ = User.objects.get_or_create(
+        client, created = User.objects.get_or_create(
             username="awa",
             defaults={
                 "email": "awa.kone@example.ci",
@@ -61,8 +61,12 @@ class Command(BaseCommand):
                 "role": User.Role.CLIENT,
                 "region": User.Region.ABIDJAN,
                 "phone": "+2250700000101",
+                "cni_number": "CI-123456-2024",
             },
         )
+        if not created:
+            client.cni_number = "CI-123456-2024"
+            client.save(update_fields=["cni_number", "first_name", "last_name", "phone", "region"])
         client.set_password("awa123")
         client.save()
 
@@ -211,35 +215,36 @@ class Command(BaseCommand):
                 )
 
         self.stdout.write("Création des souscriptions assurance...")
-        if not InsuranceSubscription.objects.exists():
-            start = timezone.now().date()
-            InsuranceSubscription.objects.create(
-                client=client,
-                product=products[0],
-                start_date=start - relativedelta(months=2),
-                end_date=start + relativedelta(months=10),
-                premium_paid=products[0].premium_amount,
-                policy_number="POL-DEMO001",
-                status=InsuranceSubscription.Status.ACTIVE,
-            )
-            InsuranceSubscription.objects.create(
-                client=client,
-                product=products[1],
-                start_date=start - relativedelta(months=1),
-                end_date=start + relativedelta(months=5),
-                premium_paid=products[1].premium_amount,
-                policy_number="POL-DEMO002",
-                status=InsuranceSubscription.Status.ACTIVE,
-            )
-            InsuranceSubscription.objects.create(
-                client=client,
-                product=products[2],
-                start_date=start - relativedelta(months=3),
-                end_date=start + relativedelta(months=9),
-                premium_paid=products[2].premium_amount,
-                policy_number="POL-DEMO003",
-                status=InsuranceSubscription.Status.ACTIVE,
-            )
+        # Supprimer les souscriptions existantes pour recréer proprement
+        InsuranceSubscription.objects.filter(client=client).delete()
+        start = timezone.now().date()
+        InsuranceSubscription.objects.create(
+            client=client,
+            product=products[0],
+            start_date=start - relativedelta(months=2),
+            end_date=start + relativedelta(months=10),
+            premium_paid=products[0].premium_amount,
+            policy_number="POL-DEMO001",
+            status=InsuranceSubscription.Status.ACTIVE,
+        )
+        InsuranceSubscription.objects.create(
+            client=client,
+            product=products[1],
+            start_date=start - relativedelta(months=6),
+            end_date=start - relativedelta(months=1),
+            premium_paid=products[1].premium_amount,
+            policy_number="POL-DEMO002",
+            status=InsuranceSubscription.Status.EXPIRED,
+        )
+        InsuranceSubscription.objects.create(
+            client=client,
+            product=products[2],
+            start_date=start - relativedelta(months=9),
+            end_date=start - relativedelta(months=3),
+            premium_paid=products[2].premium_amount,
+            policy_number="POL-DEMO003",
+            status=InsuranceSubscription.Status.EXPIRED,
+        )
 
         self.stdout.write("Création des notifications...")
         if Notification.objects.count() < 5:
